@@ -19,3 +19,4 @@
 - Never hardcode Raycast deeplink owner/name separately from `package.json`; Store author changes can make actions and post-submit redirects fail with "cannot load function."
 - Raycast command deeplinks must target the manifest command `name`, not the old file/title concept; after renaming `Onboarding` to `API Key`, internal actions must open `api-key`.
 - After adding or renaming Raycast commands, `npm run build` is not enough for local validation; run `npm run dev`/`ray develop` so Raycast refreshes its enabled-command registry.
+- For navigation between commands inside the same Raycast extension, use `launchCommand` with `LaunchType.UserInitiated`; `raycast://` URLs can be blocked by Raycast with "Not allowed to run command."
