@@ -52,6 +52,7 @@
 - [x] Verify the reading-detail/hero-summary polish with TypeScript, focused presenter tests, and a production Raycast build.
 - [x] Add store submission metadata scaffolding: macOS platform restriction, changelog, gitignore, search keywords, contributor metadata, and lint configuration.
 - [x] Initialize a local git repository on `main` and capture the first publish-ready commit.
+- [x] Patch the manifest author to the verified Raycast username `mage_narayan` and confirm lint/build pass.
 - [ ] Re-authenticate GitHub CLI and create the remote repository for this extension.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.
@@ -68,7 +69,7 @@
 - Raycast-native UX for this extension means instant cached first paint, list/detail hierarchy, and background cache warming from sidecar commands instead of view-level polling.
 - The menu bar should act like a glanceable “current pulse” surface, not a second dashboard for service health counters.
 - Public Store review will likely require git history, GitHub authentication, and screenshot metadata in addition to the extension code itself.
-- Raycast lint is clean at the code/style level; the remaining manifest blocker is the unresolved public `author` handle in `package.json`.
+- Raycast lint and build are clean with the verified `mage_narayan` author handle; screenshots and publish submission remain.
 
 ## Review
 

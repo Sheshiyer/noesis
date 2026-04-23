@@ -4,7 +4,7 @@
   "title": "Selemene Noesis",
   "description": "Raycast client for Selemene with onboarding, a local SQLite cache, execution flows, and a live pulse menu bar",
   "icon": "icon.png",
-  "author": "sheshiyer",
+  "author": "mage_narayan",
   "platforms": [
     "macOS"
   ],
