@@ -63,6 +63,7 @@
 - [x] Rename the API key command slug from `onboarding` to `api-key` so Raycast actions no longer target a disabled/old command.
 - [x] Refresh Raycast's local enabled-command registry with `npm run dev` after the `api-key` command rename.
 - [x] Replace internal `raycast://` command navigation with Raycast's native `launchCommand` API to avoid blocked command launches.
+- [x] Move the latest screenshot drafts out of runtime `assets/` and into `docs/screenshots-drafts/` with stable review names.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
 - [ ] Replace screenshot drafts with official `2000x1250` PNG files in top-level `metadata/`.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.
@@ -82,6 +83,7 @@
 - Raycast lint and build are clean with the verified `mage_narayan` author handle; screenshots and publish submission remain.
 - GitHub remote is `https://github.com/Sheshiyer/noesis`; local `main` tracks `origin/main`.
 - Screenshot drafts exist for visual review, but the current files are `750x474` or `862x586` and should not be submitted as Store metadata.
+- The updated screenshot drafts are now named semantically under `docs/screenshots-drafts/`; the next publish pass should regenerate only the strongest three to six scenes at `2000x1250`.
 
 ## Review
 
