@@ -1,16 +1,19 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "noesis",
-  "title": "Selemene Noesis",
-  "description": "Raycast client for Selemene with onboarding, a local SQLite cache, execution flows, and a live pulse menu bar",
+  "title": "Tryambakam Noesis",
+  "description": "Raycast command center for Tryambakam Noesis, powered by the Selemene Engine",
   "icon": "icon.png",
   "author": "mage_narayan",
   "platforms": [
     "macOS"
   ],
   "keywords": [
+    "tryambakam",
     "selemene",
     "noesis",
+    "kha-ba-la",
+    "self-consciousness",
     "readings",
     "engines",
     "workflows",
@@ -23,8 +26,8 @@
   "preferences": [
     {
       "name": "baseUrl",
-      "title": "Selemene Base URL",
-      "description": "Optional fallback base URL when onboarding has not stored one yet.",
+      "title": "Selemene Engine Base URL",
+      "description": "Optional fallback API URL when onboarding has not stored one yet.",
       "type": "textfield",
       "required": false,
       "default": "https://selemene.tryambakam.space"
@@ -56,10 +59,11 @@
     {
       "name": "dashboard",
       "title": "Dashboard",
-      "description": "Raycast-native command center for Selemene status, navigation, and recent activity",
+      "description": "Command center for Tryambakam Noesis status, navigation, and recent activity",
       "keywords": [
         "dashboard",
         "overview",
+        "tryambakam",
         "selemene",
         "status"
       ],
@@ -68,7 +72,7 @@
     {
       "name": "engines",
       "title": "Engines",
-      "description": "Browse cached Selemene engines with phase grouping and detail previews",
+      "description": "Browse Selemene Engine lenses with phase grouping and detail previews",
       "keywords": [
         "engines",
         "catalog",
@@ -112,7 +116,7 @@
     {
       "name": "onboarding",
       "title": "Onboarding",
-      "description": "Connect a Selemene API key and warm the local cache",
+      "description": "Connect a Selemene Engine API key and warm the local cache",
       "mode": "view"
     },
     {

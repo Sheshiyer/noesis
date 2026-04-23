@@ -8,7 +8,7 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
-  /** Selemene Base URL - Optional fallback base URL when onboarding has not stored one yet. */
+  /** Selemene Engine Base URL - Optional fallback API URL when onboarding has not stored one yet. */
   "baseUrl": string,
   /** Pulse Title Mode - Choose which current insight the menu bar title should prioritize. */
   "pulseMode": "vedicClock" | "biorhythm" | "vimshottari"

@@ -49,7 +49,7 @@ export function ProfileForm({
     if (!config) {
       await showToast({
         style: Toast.Style.Failure,
-        title: "No Selemene API key",
+        title: "No Selemene Engine API key",
         message: "Run onboarding before saving your profile.",
       });
       return;
@@ -80,7 +80,7 @@ export function ProfileForm({
   return (
     <Form
       isLoading={isSubmitting}
-      navigationTitle="Noesis Profile"
+      navigationTitle="Tryambakam Profile"
       actions={
         <NoesisActionPanel>
           <Action.SubmitForm

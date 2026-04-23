@@ -2,6 +2,8 @@
 
 ## Current Publish State
 
+- Product name: `Tryambakam Noesis`
+- Backend positioning: powered by the `Selemene Engine`
 - Raycast author: `mage_narayan`
 - GitHub repo: `https://github.com/Sheshiyer/noesis`
 - Local branch: `main`
@@ -14,7 +16,7 @@ Raycast Store screenshots belong in the top-level `metadata/` directory. The off
 Use these filenames when the captures are ready:
 
 - `metadata/dashboard-command-center.png`
-- `metadata/engine-console-run.png`
+- `metadata/engine-console-biorhythm.png`
 - `metadata/reading-result-report.png`
 - `metadata/pulse-menu-bar.png`
 - `metadata/profile-defaults.png`
@@ -27,9 +29,11 @@ The current manually saved screenshots were moved out of `assets/` and into `doc
 - `docs/screenshots-drafts/dashboard-command-center.png` (`750x474`)
 - `docs/screenshots-drafts/engine-console-biorhythm.png` (`862x586`)
 - `docs/screenshots-drafts/workflow-studio-birth-blueprint.png` (`862x586`)
-- `docs/screenshots-drafts/dashboard-selemene-link.png` (`862x586`)
+- `docs/screenshots-drafts/dashboard-selemene-engine-link.png` (`862x586`)
 
 These are useful for visual review, but they should be regenerated with Raycast Window Capture before Store publish because they do not match the official `2000x1250` metadata size.
+
+The drafts also show real profile context. Use safe demo profile values before committing final metadata screenshots.
 
 ## Screenshot Requirements
 
@@ -44,7 +48,7 @@ These are useful for visual review, but they should be regenerated with Raycast 
 ## Recommended Capture Set
 
 - Dashboard command center: show the launchpad, status, active engines, and current pulse surfaces.
-- Engine console run: show an engine execution form with safe demo profile values.
+- Engine console run: show an engine execution form with safe demo profile values and position it as a Selemene Engine lens.
 - Reading result report: show the interpreted result page instead of raw JSON.
 - Pulse menu bar: show the concise current insight dropdown.
 - Profile defaults: show reusable profile preferences with non-sensitive demo values.

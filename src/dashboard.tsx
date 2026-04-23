@@ -87,9 +87,9 @@ export default function Dashboard() {
 
   if (error && !snapshot) {
     return (
-      <List navigationTitle="Noesis Dashboard">
+      <List navigationTitle="Tryambakam Noesis">
         <List.Item
-          title="Unable to load Selemene"
+          title="Unable to load Tryambakam Noesis"
           subtitle={error}
           actions={<NoesisActionPanel onRefresh={reload} hideDashboardAction />}
         />
@@ -125,8 +125,8 @@ export default function Dashboard() {
     <List
       isLoading={isLoading}
       isShowingDetail
-      navigationTitle="Noesis Dashboard"
-      searchBarPlaceholder="Navigate Noesis"
+      navigationTitle="Tryambakam Noesis"
+      searchBarPlaceholder="Navigate Tryambakam Noesis"
     >
       {snapshot ? (
         <>
@@ -489,7 +489,7 @@ export default function Dashboard() {
               }}
               title={
                 snapshot.hasCredentials
-                  ? "Selemene Link Ready"
+                  ? "Selemene Engine Ready"
                   : "Cached Mode Only"
               }
               keywords={[
@@ -519,10 +519,10 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Selemene Link",
+                    "# Selemene Engine",
                     "",
                     snapshot.hasCredentials
-                      ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from Selemene."
+                      ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from the Selemene Engine."
                       : "No live key is connected. The dashboard is operating from the local cache until onboarding reconnects the API key.",
                     "",
                     `- Base URL: \`${snapshot.baseUrl}\``,

@@ -78,7 +78,7 @@ export function EngineExecutionForm({
     if (!config) {
       await showToast({
         style: Toast.Style.Failure,
-        title: "No Selemene API key",
+        title: "No Selemene Engine API key",
         message: "Run onboarding before executing readings.",
       });
       return;
@@ -189,7 +189,7 @@ export function WorkflowExecutionForm({
     if (!config) {
       await showToast({
         style: Toast.Style.Failure,
-        title: "No Selemene API key",
+        title: "No Selemene Engine API key",
         message: "Run onboarding before executing workflows.",
       });
       return;

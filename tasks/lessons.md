@@ -14,3 +14,4 @@
 - In Raycast detail-mode lists, avoid pairing long inline subtitles with badges or multiple accessories; keep rows to a strong title plus compact signals, and move secondary data into tooltips, keywords, and the detail pane.
 - For a pulse-oriented Raycast extension, never let low-level service health like `ok` become the menu bar title when the user expects a current symbolic reading or pulse state.
 - Execution result pages should interpret API payloads into readable sections and keep raw JSON as a secondary surface; a full JSON dump should not be the primary UX.
+- Store-facing copy should lead with `Tryambakam Noesis`; `Selemene Engine` is the powered-by backend layer, not the public product name.

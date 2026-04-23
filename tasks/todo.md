@@ -1,4 +1,4 @@
-# Selemene Raycast Plugin Plan
+# Tryambakam Noesis Raycast Plan
 
 ## Checklist
 
@@ -56,6 +56,7 @@
 - [x] Re-authenticate GitHub CLI and create the remote repository for this extension.
 - [x] Document public-safe screenshot names, placement, and capture requirements for Store metadata.
 - [x] Move manually saved screenshot drafts out of runtime `assets/` and into `docs/screenshots-drafts/` with semantic names.
+- [x] Rebrand Store-facing product copy from `Selemene Noesis` to `Tryambakam Noesis`, with `Selemene Engine` as the powered-by backend.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
 - [ ] Replace screenshot drafts with official `2000x1250` PNG files in top-level `metadata/`.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.

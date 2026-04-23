@@ -63,13 +63,13 @@ export function EnginesBrowser(props: BrowserProps) {
     <List
       isLoading={isLoading}
       isShowingDetail
-      navigationTitle="Noesis Engines"
+      navigationTitle="Tryambakam Engines"
       searchBarPlaceholder="Browse cached engines"
     >
       {!engines.length ? (
         <List.EmptyView
           title="No engines cached yet"
-          description="Refresh the Selemene snapshot or reconnect onboarding to load the engine catalog."
+          description="Refresh the Selemene Engine snapshot or reconnect onboarding to load the engine catalog."
           actions={
             <NoesisActionPanel
               onRefresh={reload}
@@ -208,13 +208,13 @@ export function WorkflowsBrowser(props: BrowserProps) {
     <List
       isLoading={isLoading}
       isShowingDetail
-      navigationTitle="Noesis Workflows"
+      navigationTitle="Tryambakam Workflows"
       searchBarPlaceholder="Browse cached workflows"
     >
       {!workflows.length ? (
         <List.EmptyView
           title="No workflows cached yet"
-          description="Refresh the Selemene snapshot or reconnect onboarding to load workflow metadata."
+          description="Refresh the Selemene Engine snapshot or reconnect onboarding to load workflow metadata."
           actions={
             <NoesisActionPanel
               onRefresh={reload}
@@ -359,7 +359,7 @@ export function ReadingsBrowser(props: ReadingsBrowserProps) {
     <List
       isLoading={isLoading}
       isShowingDetail
-      navigationTitle="Noesis Readings"
+      navigationTitle="Tryambakam Readings"
       searchBarPlaceholder="Browse cached readings"
     >
       {!readings.length ? (
@@ -628,7 +628,7 @@ function BrowserErrorList({
   onRefresh: (force?: boolean) => Promise<void> | void;
 }) {
   return (
-    <List navigationTitle="Noesis">
+    <List navigationTitle="Tryambakam Noesis">
       <List.Item
         icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
         title={title}

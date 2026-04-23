@@ -60,7 +60,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
       await showToast({
         style: Toast.Style.Failure,
         title: "API key required",
-        message: "Paste a Selemene API key to complete onboarding.",
+        message: "Paste a Selemene Engine API key to complete onboarding.",
       });
       return;
     }
@@ -82,7 +82,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
 
       await showToast({
         style: Toast.Style.Success,
-        title: "Selemene connected",
+        title: "Selemene Engine connected",
         message: "Local cache warmed and ready.",
       });
 
@@ -101,7 +101,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
         message:
           error instanceof Error
             ? error.message
-            : "Unable to validate the Selemene API key.",
+            : "Unable to validate the Selemene Engine API key.",
       });
     } finally {
       setIsSubmitting(false);
@@ -110,7 +110,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
 
   const handleClear = async () => {
     const confirmed = await confirmAlert({
-      title: "Clear saved Selemene key?",
+      title: "Clear saved Selemene Engine key?",
       message:
         "The local cache stays on disk, but live sync will stop until you reconnect.",
       primaryAction: {
@@ -155,7 +155,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
     >
       <Form.Description
         title="Onboarding"
-        text="Connect the Raycast plugin to Selemene. The API key is saved in Raycast local storage; cached profile, workflows, usage, and readings live in local SQLite for fast retrieval."
+        text="Connect Tryambakam Noesis to the Selemene Engine. The API key is saved in Raycast local storage; cached profile, workflows, usage, and readings live in local SQLite for fast retrieval."
       />
       <Form.TextField
         id="baseUrl"

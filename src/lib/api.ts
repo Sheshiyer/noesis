@@ -296,7 +296,7 @@ class SelemeneApiClient {
 
     if (!this.apiKey) {
       throw new Error(
-        "Selemene API key is missing. Complete onboarding before using the extension.",
+        "Selemene Engine API key is missing. Complete onboarding before using the extension.",
       );
     }
   }
@@ -445,7 +445,7 @@ function buildApiErrorMessage(
   payload: ApiErrorResponse,
 ): string {
   if (status === 401) {
-    return "Authentication failed. Check the Selemene API key.";
+    return "Authentication failed. Check the Selemene Engine API key.";
   }
 
   if (status === 403) {
