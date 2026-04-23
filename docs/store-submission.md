@@ -13,6 +13,12 @@
 
 Raycast Store screenshots belong in the top-level `metadata/` directory. The official capture flow can place them there automatically when Window Capture is configured and `Save to Metadata` is enabled.
 
+Current generated metadata set:
+
+- `metadata/dashboard-command-center.png` (`2000x1250`)
+- `metadata/engine-console-biorhythm.png` (`2000x1250`)
+- `metadata/profile-defaults.png` (`2000x1250`)
+
 Use these filenames when the captures are ready:
 
 - `metadata/dashboard-command-center.png`
@@ -37,6 +43,8 @@ The current manually saved screenshots were moved out of `assets/` and into `doc
 These are useful for visual review, but they should be regenerated with Raycast Window Capture before Store publish because they do not match the official `2000x1250` metadata size.
 
 The drafts also show real profile context. Use safe demo profile values before committing final metadata screenshots.
+
+The current `metadata/` files were generated from the safe drafts via `scripts/generate-metadata-screenshots.sh` so the repo now has a consistent `16:10` reviewable set while the remaining optional scenes can be captured later.
 
 ## Screenshot Requirements
 

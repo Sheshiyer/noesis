@@ -64,8 +64,8 @@
 - [x] Refresh Raycast's local enabled-command registry with `npm run dev` after the `api-key` command rename.
 - [x] Replace internal `raycast://` command navigation with Raycast's native `launchCommand` API to avoid blocked command launches.
 - [x] Move the latest screenshot drafts out of runtime `assets/` and into `docs/screenshots-drafts/` with stable review names.
-- [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
-- [ ] Replace screenshot drafts with official `2000x1250` PNG files in top-level `metadata/`.
+- [x] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
+- [x] Replace screenshot drafts with `2000x1250` PNG files in top-level `metadata/`.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.
 
 ## Notes
@@ -84,6 +84,8 @@
 - GitHub remote is `https://github.com/Sheshiyer/noesis`; local `main` tracks `origin/main`.
 - Screenshot drafts exist for visual review, but the current files are `750x474` or `862x586` and should not be submitted as Store metadata.
 - The updated screenshot drafts are now named semantically under `docs/screenshots-drafts/`; the next publish pass should regenerate only the strongest three to six scenes at `2000x1250`.
+- `metadata/` now contains three public-safe `2000x1250` PNGs generated from safe drafts: `dashboard-command-center`, `engine-console-biorhythm`, and `profile-defaults`.
+- `scripts/generate-metadata-screenshots.sh` reproduces the current metadata set with a consistent framed background treatment.
 
 ## Review
 
@@ -93,6 +95,7 @@
 - Refactored dashboard, menu bar, and quick stats to read cache first and only refresh stale resources based on TTLs.
 - Replaced the incompatible `node:sqlite` dependency with a small wrapper around the system `sqlite3` binary so Raycast can still persist a real `.sqlite` cache file at runtime.
 - Rebuilt the installed extension bundle and verified the Raycast runtime log after launching `Noesis Onboarding` and `Noesis Dashboard`; the prior `No such built-in module: node:sqlite` fault is gone.
+- Generated three store-ready `2000x1250` metadata screenshots under `metadata/` and added a reproducible `ffmpeg`-based generator script for future refreshes.
 - Fixed the next runtime issue by making the sqlite wrapper wait on transient locks instead of failing immediately, and by removing the menu bar's extra in-process polling loop that was overlapping Raycast's own refresh scheduling.
 - Verified the rebuilt extension after clearing the Raycast log and launching `Noesis Metrics` and `Noesis Dashboard`; the fresh log stayed empty instead of reporting `database is locked (5)`.
 - Reviewed the dashboard interaction model and confirmed the current list rows all reuse the same refresh-only action panel, which is why selecting an engine does not start a new reading.
