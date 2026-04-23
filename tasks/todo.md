@@ -53,7 +53,8 @@
 - [x] Add store submission metadata scaffolding: macOS platform restriction, changelog, gitignore, search keywords, contributor metadata, and lint configuration.
 - [x] Initialize a local git repository on `main` and capture the first publish-ready commit.
 - [x] Patch the manifest author to the verified Raycast username `mage_narayan` and confirm lint/build pass.
-- [ ] Re-authenticate GitHub CLI and create the remote repository for this extension.
+- [x] Re-authenticate GitHub CLI and create the remote repository for this extension.
+- [x] Document public-safe screenshot names, placement, and capture requirements for Store metadata.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.
 
@@ -70,6 +71,7 @@
 - The menu bar should act like a glanceable “current pulse” surface, not a second dashboard for service health counters.
 - Public Store review will likely require git history, GitHub authentication, and screenshot metadata in addition to the extension code itself.
 - Raycast lint and build are clean with the verified `mage_narayan` author handle; screenshots and publish submission remain.
+- GitHub remote is `https://github.com/Sheshiyer/noesis`; local `main` tracks `origin/main`.
 
 ## Review
 
