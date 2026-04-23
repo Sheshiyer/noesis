@@ -55,7 +55,9 @@
 - [x] Patch the manifest author to the verified Raycast username `mage_narayan` and confirm lint/build pass.
 - [x] Re-authenticate GitHub CLI and create the remote repository for this extension.
 - [x] Document public-safe screenshot names, placement, and capture requirements for Store metadata.
+- [x] Move manually saved screenshot drafts out of runtime `assets/` and into `docs/screenshots-drafts/` with semantic names.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
+- [ ] Replace screenshot drafts with official `2000x1250` PNG files in top-level `metadata/`.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.
 
 ## Notes
@@ -72,6 +74,7 @@
 - Public Store review will likely require git history, GitHub authentication, and screenshot metadata in addition to the extension code itself.
 - Raycast lint and build are clean with the verified `mage_narayan` author handle; screenshots and publish submission remain.
 - GitHub remote is `https://github.com/Sheshiyer/noesis`; local `main` tracks `origin/main`.
+- Screenshot drafts exist for visual review, but the current files are `750x474` or `862x586` and should not be submitted as Store metadata.
 
 ## Review
 

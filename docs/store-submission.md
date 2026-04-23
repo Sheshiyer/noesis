@@ -20,6 +20,17 @@ Use these filenames when the captures are ready:
 - `metadata/profile-defaults.png`
 - `metadata/reading-archive.png`
 
+## Draft Captures
+
+The current manually saved screenshots were moved out of `assets/` and into `docs/screenshots-drafts/` so they do not get bundled as runtime assets:
+
+- `docs/screenshots-drafts/dashboard-command-center.png` (`750x474`)
+- `docs/screenshots-drafts/engine-console-biorhythm.png` (`862x586`)
+- `docs/screenshots-drafts/workflow-studio-birth-blueprint.png` (`862x586`)
+- `docs/screenshots-drafts/dashboard-selemene-link.png` (`862x586`)
+
+These are useful for visual review, but they should be regenerated with Raycast Window Capture before Store publish because they do not match the official `2000x1250` metadata size.
+
 ## Screenshot Requirements
 
 - Use PNG.
