@@ -40,7 +40,7 @@ export function NoesisActionPanel({
           />
         ) : null}
         <Action
-          title="Open Onboarding"
+          title="Edit Access Key"
           icon={Icon.Key}
           shortcut={{ modifiers: ["cmd"], key: "o" }}
           onAction={() => openCommand("onboarding")}

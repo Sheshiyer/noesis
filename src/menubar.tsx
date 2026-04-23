@@ -57,7 +57,7 @@ export default function MenuBar() {
       dashboard.source === "empty" ? (
         <>
           <MenuBarExtra.Item
-            title="Run onboarding to connect Selemene"
+            title="Connect Selemene Engine API Key"
             icon={Icon.Key}
             onAction={() => openCommand("onboarding")}
           />
@@ -224,7 +224,7 @@ export default function MenuBar() {
         onAction={() => openCommand("profile")}
       />
       <MenuBarExtra.Item
-        title="Reconnect API Key"
+        title="Edit Access Key"
         icon={Icon.Key}
         onAction={() => openCommand("onboarding")}
       />

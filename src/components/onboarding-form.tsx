@@ -11,7 +11,7 @@ import {
   Toast,
 } from "@raycast/api";
 import { normalizeBaseUrl, validateSelemeneCredentials } from "../lib/api";
-import { syncDashboardSnapshot } from "../lib/queries";
+import { clearDashboardCache, syncDashboardSnapshot } from "../lib/queries";
 import {
   clearStoredConfig,
   DEFAULT_BASE_URL,
@@ -33,6 +33,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
   const [baseUrl, setBaseUrl] = useState(DEFAULT_BASE_URL);
   const [apiKey, setApiKey] = useState("");
   const [existingApiKey, setExistingApiKey] = useState("");
+  const [existingBaseUrl, setExistingBaseUrl] = useState(DEFAULT_BASE_URL);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,6 +44,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
         getStoredApiKey(),
       ]);
       setBaseUrl(savedBaseUrl);
+      setExistingBaseUrl(savedBaseUrl);
       setExistingApiKey(savedApiKey);
       setIsLoading(false);
     };
@@ -55,6 +57,10 @@ export function OnboardingForm(props: OnboardingFormProps) {
     const resolvedBaseUrl = normalizeBaseUrl(
       values.baseUrl.trim() || DEFAULT_BASE_URL,
     );
+    const isReplacingApiKey = Boolean(
+      values.apiKey.trim() && values.apiKey.trim() !== existingApiKey,
+    );
+    const isChangingBaseUrl = resolvedBaseUrl !== existingBaseUrl;
 
     if (!resolvedApiKey) {
       await showToast({
@@ -71,6 +77,11 @@ export function OnboardingForm(props: OnboardingFormProps) {
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
       });
+
+      if (isReplacingApiKey || isChangingBaseUrl) {
+        clearDashboardCache();
+      }
+
       await saveStoredConfig({
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
@@ -82,11 +93,17 @@ export function OnboardingForm(props: OnboardingFormProps) {
 
       await showToast({
         style: Toast.Style.Success,
-        title: "Selemene Engine connected",
-        message: "Local cache warmed and ready.",
+        title: isReplacingApiKey
+          ? "API key replaced"
+          : "Selemene Engine connected",
+        message:
+          isReplacingApiKey || isChangingBaseUrl
+            ? "Old account cache cleared and the new profile is warmed."
+            : "Local cache warmed and ready.",
       });
 
       setExistingApiKey(resolvedApiKey);
+      setExistingBaseUrl(resolvedBaseUrl);
       setApiKey("");
 
       if (props.onSaved) {
@@ -110,12 +127,12 @@ export function OnboardingForm(props: OnboardingFormProps) {
 
   const handleClear = async () => {
     const confirmed = await confirmAlert({
-      title: "Clear saved Selemene Engine key?",
+      title: "Clear saved API key and cache?",
       message:
-        "The local cache stays on disk, but live sync will stop until you reconnect.",
+        "This removes the saved key plus cached profile, readings, and pulse data from this Mac.",
       primaryAction: {
         style: Alert.ActionStyle.Destructive,
-        title: "Clear Key",
+        title: "Clear Key and Cache",
       },
     });
 
@@ -124,12 +141,14 @@ export function OnboardingForm(props: OnboardingFormProps) {
     }
 
     await clearStoredConfig();
+    clearDashboardCache();
     setExistingApiKey("");
+    setExistingBaseUrl(DEFAULT_BASE_URL);
     setApiKey("");
 
     await showToast({
       style: Toast.Style.Success,
-      title: "Saved key cleared",
+      title: "Saved key and cache cleared",
     });
   };
 
@@ -139,13 +158,17 @@ export function OnboardingForm(props: OnboardingFormProps) {
       actions={
         <ActionPanel>
           <Action.SubmitForm
-            title="Validate and Save"
+            title={
+              existingApiKey
+                ? "Validate and Replace Key"
+                : "Validate and Save Key"
+            }
             icon={Icon.CheckCircle}
             onSubmit={handleSubmit}
           />
           {existingApiKey ? (
             <Action
-              title="Clear Saved Key"
+              title="Clear Saved Key and Cache"
               icon={Icon.Trash}
               onAction={handleClear}
             />
@@ -154,8 +177,8 @@ export function OnboardingForm(props: OnboardingFormProps) {
       }
     >
       <Form.Description
-        title="Onboarding"
-        text="Connect Tryambakam Noesis to the Selemene Engine. The API key is saved in Raycast local storage; cached profile, workflows, usage, and readings live in local SQLite for fast retrieval."
+        title={existingApiKey ? "Edit API Key" : "Connect API Key"}
+        text="Connect Tryambakam Noesis to the Selemene Engine. Replacing the key clears the old local snapshot first, then warms the dashboard from the account attached to the new key."
       />
       <Form.TextField
         id="baseUrl"
@@ -178,8 +201,8 @@ export function OnboardingForm(props: OnboardingFormProps) {
       />
       {existingApiKey ? (
         <Form.Description
-          title="Saved Key"
-          text="A key is already stored locally. Leaving the API key field blank keeps the current key and only updates the base URL."
+          title="Current Key"
+          text="A key is already stored locally. Paste a new key to rotate accounts, or leave this blank and submit to refresh the current profile and cache."
         />
       ) : null}
     </Form>

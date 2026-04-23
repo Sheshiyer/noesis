@@ -115,8 +115,8 @@
     },
     {
       "name": "onboarding",
-      "title": "Onboarding",
-      "description": "Connect a Selemene Engine API key and warm the local cache",
+      "title": "API Key",
+      "description": "Connect, edit, or rotate the Selemene Engine API key and warm the local cache",
       "mode": "view"
     },
     {

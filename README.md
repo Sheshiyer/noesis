@@ -23,16 +23,17 @@ Selemene is the computational layer underneath: the API that calculates engine o
 3. `Workflows` - Browse synthesis workflows and execute multi-engine runs.
 4. `Readings` - Review cached reading history with interpreted result pages.
 5. `Profile` - Maintain shared birth data, timezone, and reusable preferences once.
-6. `Onboarding` - Connect or rotate the Selemene Engine API key and warm the local cache.
+6. `API Key` - Connect, edit, or rotate the Selemene Engine API key and warm the local cache.
 7. `Pulse` - Menu bar surface for current TCM organ timing plus cached biorhythm and Vimshottari context.
 
 ## Configuration
 
 Primary path:
 
-- Run `Onboarding`
+- Run `API Key`
 - Paste the Selemene Engine API key (`nk_...`)
 - Optionally override the base URL
+- Paste a new key later to rotate accounts; Tryambakam Noesis clears the old local snapshot before warming the replacement profile.
 
 Fallbacks still supported for development:
 

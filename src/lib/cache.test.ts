@@ -122,3 +122,48 @@ test("cache repository persists and reloads Selemene snapshots", () => {
   assert.equal(insights[0]?.title, "Kidney · Kapha");
   assert.equal(insights[0]?.refreshAfter, "2026-04-16T19:00:00Z");
 });
+
+test("cache repository clears account-specific snapshots before key rotation", () => {
+  const tempDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "noesis-cache-clear-test-"),
+  );
+  const databasePath = path.join(tempDir, "cache.sqlite");
+  const repository = createNoesisCacheRepository(databasePath);
+
+  repository.saveRemoteSnapshot({
+    baseUrl: "https://selemene.tryambakam.space",
+    fetchedAt: "2026-04-23T12:00:00Z",
+    profile: {
+      id: "real-user",
+      email: "real@example.com",
+      fullName: "Real Profile",
+      tier: "enterprise",
+      consciousnessLevel: 3,
+      experiencePoints: 999,
+      preferences: {},
+      fetchedAt: "2026-04-23T12:00:00Z",
+    },
+    readings: [
+      {
+        id: "real-reading",
+        engineId: "biorhythm",
+        inputHash: "real-hash",
+        witnessPrompt: "Private profile prompt",
+        consciousnessLevel: 3,
+        createdAt: "2026-04-23T11:59:00Z",
+        payload: { private: true },
+        fetchedAt: "2026-04-23T12:00:00Z",
+      },
+    ],
+  });
+
+  repository.clearAll();
+
+  const snapshot = repository.readSnapshot(
+    "https://selemene.tryambakam.space",
+    true,
+  );
+  assert.equal(snapshot.profile, undefined);
+  assert.equal(snapshot.readings.length, 0);
+  assert.equal(snapshot.timestamps.profile, undefined);
+});

@@ -555,8 +555,8 @@ export default function Dashboard() {
                   <Action
                     title={
                       snapshot.hasCredentials
-                        ? "Reconnect Access Key"
-                        : "Run Onboarding"
+                        ? "Edit Access Key"
+                        : "Connect Access Key"
                     }
                     icon={Icon.Key}
                     onAction={() => openCommand("onboarding")}

@@ -48,10 +48,21 @@ The drafts also show real profile context. Use safe demo profile values before c
 ## Recommended Capture Set
 
 - Dashboard command center: show the launchpad, status, active engines, and current pulse surfaces.
+- API key rotation: show the `API Key` command with a safe dummy key ready to replace the stored key.
 - Engine console run: show an engine execution form with safe demo profile values and position it as a Selemene Engine lens.
 - Reading result report: show the interpreted result page instead of raw JSON.
 - Pulse menu bar: show the concise current insight dropdown.
 - Profile defaults: show reusable profile preferences with non-sensitive demo values.
+
+## Dummy Profile Flow
+
+Use the `API Key` command before screenshots:
+
+1. Paste the dummy Selemene Engine API key.
+2. Run `Validate and Replace Key`.
+3. Confirm the dashboard shows the dummy profile before capturing.
+
+Replacing a key clears the old local snapshot first. That prevents a stale real profile from appearing while the dummy account warms.
 
 ## Publish Gate
 

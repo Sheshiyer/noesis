@@ -48,6 +48,10 @@ export async function readMenuBarSnapshot(): Promise<MenuBarSnapshot> {
   };
 }
 
+export function clearDashboardCache(): void {
+  getCacheRepository().clearAll();
+}
+
 export async function syncDashboardSnapshot(
   options: {
     force?: boolean;
