@@ -59,7 +59,7 @@ export default function MenuBar() {
           <MenuBarExtra.Item
             title="Connect Selemene Engine API Key"
             icon={Icon.Key}
-            onAction={() => openCommand("onboarding")}
+            onAction={() => openCommand("api-key")}
           />
           <MenuBarExtra.Separator />
         </>
@@ -226,7 +226,7 @@ export default function MenuBar() {
       <MenuBarExtra.Item
         title="Edit Access Key"
         icon={Icon.Key}
-        onAction={() => openCommand("onboarding")}
+        onAction={() => openCommand("api-key")}
       />
       <MenuBarExtra.Item
         title="Refresh Pulse Now"

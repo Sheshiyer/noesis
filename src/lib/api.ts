@@ -290,13 +290,13 @@ class SelemeneApiClient {
 
     if (!this.baseUrl) {
       throw new Error(
-        "Selemene base URL is missing. Configure it during onboarding or via the environment.",
+        "Selemene base URL is missing. Configure it in the API Key command or via the environment.",
       );
     }
 
     if (!this.apiKey) {
       throw new Error(
-        "Selemene Engine API key is missing. Complete onboarding before using the extension.",
+        "Selemene Engine API key is missing. Run the API Key command before using the extension.",
       );
     }
   }

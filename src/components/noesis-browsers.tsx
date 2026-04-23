@@ -69,7 +69,7 @@ export function EnginesBrowser(props: BrowserProps) {
       {!engines.length ? (
         <List.EmptyView
           title="No engines cached yet"
-          description="Refresh the Selemene Engine snapshot or reconnect onboarding to load the engine catalog."
+          description="Refresh the Selemene Engine snapshot or reconnect the API key to load the engine catalog."
           actions={
             <NoesisActionPanel
               onRefresh={reload}
@@ -214,7 +214,7 @@ export function WorkflowsBrowser(props: BrowserProps) {
       {!workflows.length ? (
         <List.EmptyView
           title="No workflows cached yet"
-          description="Refresh the Selemene Engine snapshot or reconnect onboarding to load workflow metadata."
+          description="Refresh the Selemene Engine snapshot or reconnect the API key to load workflow metadata."
           actions={
             <NoesisActionPanel
               onRefresh={reload}

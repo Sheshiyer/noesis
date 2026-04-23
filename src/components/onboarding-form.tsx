@@ -6,11 +6,11 @@ import {
   Form,
   Icon,
   confirmAlert,
-  open,
   showToast,
   Toast,
 } from "@raycast/api";
 import { normalizeBaseUrl, validateSelemeneCredentials } from "../lib/api";
+import { openCommand } from "../lib/navigation";
 import { clearDashboardCache, syncDashboardSnapshot } from "../lib/queries";
 import {
   clearStoredConfig,
@@ -109,7 +109,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
       if (props.onSaved) {
         await props.onSaved();
       } else {
-        await open("raycast://extensions/sheshiyer/noesis/dashboard");
+        await openCommand("dashboard");
       }
     } catch (error) {
       await showToast({

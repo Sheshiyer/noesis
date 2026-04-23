@@ -59,6 +59,8 @@
 - [x] Rebrand Store-facing product copy from `Selemene Noesis` to `Tryambakam Noesis`, with `Selemene Engine` as the powered-by backend.
 - [x] Promote API key editing from hidden onboarding behavior into a screenshot-ready `API Key` command and `Edit API Key` action.
 - [x] Clear stale local identity/cache data before warming a profile from a replacement API key.
+- [x] Fix command deeplinks to derive the Raycast extension owner/name from `package.json` after the `mage_narayan` author rebrand.
+- [x] Rename the API key command slug from `onboarding` to `api-key` so Raycast actions no longer target a disabled/old command.
 - [ ] Capture at least three public-safe Raycast metadata screenshots for the Store listing.
 - [ ] Replace screenshot drafts with official `2000x1250` PNG files in top-level `metadata/`.
 - [ ] Run network-enabled lint/build checks and attempt `npm run publish` for public Raycast Store review.

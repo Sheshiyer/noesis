@@ -50,7 +50,7 @@ export function ProfileForm({
       await showToast({
         style: Toast.Style.Failure,
         title: "No Selemene Engine API key",
-        message: "Run onboarding before saving your profile.",
+        message: "Run API Key before saving your profile.",
       });
       return;
     }

@@ -523,7 +523,7 @@ export default function Dashboard() {
                     "",
                     snapshot.hasCredentials
                       ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from the Selemene Engine."
-                      : "No live key is connected. The dashboard is operating from the local cache until onboarding reconnects the API key.",
+                      : "No live key is connected. The dashboard is operating from the local cache until the API Key command reconnects the engine.",
                     "",
                     `- Base URL: \`${snapshot.baseUrl}\``,
                     `- Access: ${snapshot.hasCredentials ? "API key connected" : "Cache only"}`,
@@ -559,7 +559,7 @@ export default function Dashboard() {
                         : "Connect Access Key"
                     }
                     icon={Icon.Key}
-                    onAction={() => openCommand("onboarding")}
+                    onAction={() => openCommand("api-key")}
                   />
                 </NoesisActionPanel>
               }
@@ -1065,7 +1065,7 @@ function getPulsePendingSummary(
   snapshot: DashboardSnapshot | null | undefined,
 ): string {
   if (!snapshot?.hasCredentials) {
-    return "Reconnect onboarding to refresh live pulse data from Selemene.";
+    return "Reconnect the API key to refresh live pulse data from the Selemene Engine.";
   }
 
   if (pulseModeLabel !== "TCM Organ" && !snapshot.profile?.birthDate) {

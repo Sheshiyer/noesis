@@ -43,7 +43,7 @@ export function NoesisActionPanel({
           title="Edit Access Key"
           icon={Icon.Key}
           shortcut={{ modifiers: ["cmd"], key: "o" }}
-          onAction={() => openCommand("onboarding")}
+          onAction={() => openCommand("api-key")}
         />
         <Action
           title="Open Extension Preferences"

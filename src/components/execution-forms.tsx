@@ -79,7 +79,7 @@ export function EngineExecutionForm({
       await showToast({
         style: Toast.Style.Failure,
         title: "No Selemene Engine API key",
-        message: "Run onboarding before executing readings.",
+        message: "Run API Key before executing readings.",
       });
       return;
     }
@@ -190,7 +190,7 @@ export function WorkflowExecutionForm({
       await showToast({
         style: Toast.Style.Failure,
         title: "No Selemene Engine API key",
-        message: "Run onboarding before executing workflows.",
+        message: "Run API Key before executing workflows.",
       });
       return;
     }

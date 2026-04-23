@@ -28,8 +28,8 @@ declare namespace Preferences {
   export type Readings = ExtensionPreferences & {}
   /** Preferences accessible in the `profile` command */
   export type Profile = ExtensionPreferences & {}
-  /** Preferences accessible in the `onboarding` command */
-  export type Onboarding = ExtensionPreferences & {}
+  /** Preferences accessible in the `api-key` command */
+  export type ApiKey = ExtensionPreferences & {}
   /** Preferences accessible in the `menubar` command */
   export type Menubar = ExtensionPreferences & {}
 }
@@ -45,8 +45,8 @@ declare namespace Arguments {
   export type Readings = {}
   /** Arguments passed to the `profile` command */
   export type Profile = {}
-  /** Arguments passed to the `onboarding` command */
-  export type Onboarding = {}
+  /** Arguments passed to the `api-key` command */
+  export type ApiKey = {}
   /** Arguments passed to the `menubar` command */
   export type Menubar = {}
 }
