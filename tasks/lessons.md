@@ -18,3 +18,4 @@
 - API key rotation must clear stale identity cache before warming the new account, or screenshots can show a previous user's profile after saving a dummy key.
 - Never hardcode Raycast deeplink owner/name separately from `package.json`; Store author changes can make actions and post-submit redirects fail with "cannot load function."
 - Raycast command deeplinks must target the manifest command `name`, not the old file/title concept; after renaming `Onboarding` to `API Key`, internal actions must open `api-key`.
+- After adding or renaming Raycast commands, `npm run build` is not enough for local validation; run `npm run dev`/`ray develop` so Raycast refreshes its enabled-command registry.
