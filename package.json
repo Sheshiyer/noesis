@@ -53,6 +53,14 @@
           "value": "vimshottari"
         }
       ]
+    },
+    {
+      "name": "witnessUrl",
+      "title": "Daily Witness API URL",
+      "description": "URL for the Daily Witness service. Defaults to 48.tryambakam.space.",
+      "type": "textfield",
+      "required": false,
+      "default": "https://48.tryambakam.space"
     }
   ],
   "commands": [
@@ -117,6 +125,20 @@
       "name": "api-key",
       "title": "API Key",
       "description": "Connect, edit, or rotate the Selemene Engine API key and warm the local cache",
+      "mode": "view"
+    },
+    {
+      "name": "daily-witness",
+      "title": "Daily Witness",
+      "description": "Daily consciousness reading with somatic witness questions from the Daily Mirror engine",
+      "keywords": [
+        "witness",
+        "daily",
+        "reading",
+        "consciousness",
+        "mirror",
+        "somatic"
+      ],
       "mode": "view"
     },
     {

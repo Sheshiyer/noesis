@@ -8,6 +8,8 @@ import {
   ReadingSummary,
   RemoteSnapshot,
   SelemeneClientConfig,
+  TarotExecutionOptions,
+  TarotSpreadVariant,
   UsageSnapshot,
   UserProfileSnapshot,
   UserProfileUpdate,
@@ -15,6 +17,62 @@ import {
   WorkflowExecutionResult,
   WorkflowSummary,
 } from "./types";
+import { getWitnessUrl } from "./witness-api";
+
+async function getWitnessGatewayUrl(): Promise<string | null> {
+  try {
+    const url = await getWitnessUrl();
+    return url || null;
+  } catch {
+    return null;
+  }
+}
+
+async function calculateEngineViaWitness(
+  witnessUrl: string,
+  config: SelemeneClientConfig,
+  engineId: string,
+  input: EngineExecutionInput,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EngineExecutionResult> {
+  const requestBody = toExecutionRequest(input);
+
+  const response = await fetchImpl(
+    `${witnessUrl}/api/v1/engines/${engineId}/calculate`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody),
+    },
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(
+      `Witness gateway error: ${response.status} ${text.slice(0, 200)}`,
+    );
+  }
+
+  const payload = (await response.json()) as Record<string, unknown>;
+
+  // Map witness_layer.witness_question → witness_prompt for existing UI
+  const witnessLayer = payload.witness_layer as
+    | Record<string, unknown>
+    | null
+    | undefined;
+  if (witnessLayer?.witness_question && !payload.witness_prompt) {
+    payload.witness_prompt = witnessLayer.witness_question;
+  }
+
+  const result = toEngineExecutionResult(payload);
+
+  // Attach witness metadata to raw for downstream use
+  if (witnessLayer) {
+    result.raw.witness_layer = witnessLayer;
+  }
+
+  return result;
+}
 
 interface HealthResponse {
   status: string;
@@ -250,9 +308,51 @@ export async function calculateEngine(
   input: EngineExecutionInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<EngineExecutionResult> {
+  // Route through witness gateway if configured
+  const witnessUrl = await getWitnessGatewayUrl();
+  if (witnessUrl) {
+    return calculateEngineViaWitness(witnessUrl, config, engineId, input, fetchImpl);
+  }
+
   const client = new SelemeneApiClient(config, fetchImpl);
   const response = await client.calculateEngine(engineId, input);
   return toEngineExecutionResult(response);
+}
+
+export function withTarotExecutionOptions(
+  input: EngineExecutionInput,
+  tarot: TarotExecutionOptions,
+): EngineExecutionInput {
+  const nextOptions: Record<string, unknown> = {
+    ...(input.options ?? {}),
+  };
+
+  if (tarot.question?.trim()) {
+    nextOptions.question = tarot.question.trim();
+  }
+
+  if (tarot.spread) {
+    nextOptions.spread = normalizeTarotSpreadVariant(tarot.spread);
+  }
+
+  return {
+    ...input,
+    options: nextOptions,
+  };
+}
+
+export async function calculateTarot(
+  config: SelemeneClientConfig,
+  input: EngineExecutionInput,
+  tarot: TarotExecutionOptions,
+  fetchImpl: typeof fetch = fetch,
+): Promise<EngineExecutionResult> {
+  return calculateEngine(
+    config,
+    "tarot",
+    withTarotExecutionOptions(input, tarot),
+    fetchImpl,
+  );
 }
 
 export async function executeWorkflow(
@@ -664,6 +764,21 @@ function toExecutionRequest(
   }
 
   return request;
+}
+
+function normalizeTarotSpreadVariant(spread: TarotSpreadVariant): TarotSpreadVariant {
+  switch (spread) {
+    case "single_card":
+    case "three_card":
+    case "celtic_cross":
+    case "horseshoe":
+    case "relationship":
+    case "career":
+    case "yes_no":
+      return spread;
+    default:
+      return "three_card";
+  }
 }
 
 function toUserProfileRequest(
