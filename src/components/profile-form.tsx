@@ -43,7 +43,9 @@ export function ProfileForm({
   const [defaultPrecision, setDefaultPrecision] = useState(
     initial.defaultPrecision,
   );
-  const [defaultWorkflow, setDefaultWorkflow] = useState(initial.defaultWorkflow);
+  const [defaultWorkflow, setDefaultWorkflow] = useState(
+    initial.defaultWorkflow,
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (values: ProfileFormValues) => {

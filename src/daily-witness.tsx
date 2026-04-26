@@ -42,11 +42,15 @@ function buildInitialValues(
     name: profile?.fullName ?? "",
     latitude: String(profile?.birthLocation?.latitude ?? ""),
     longitude: String(profile?.birthLocation?.longitude ?? ""),
-    timezone: profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone:
+      profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
   };
 }
 
-function narrativeLabel(ds: { consecutive_days: number; total_visits: number }): string {
+function narrativeLabel(ds: {
+  consecutive_days: number;
+  total_visits: number;
+}): string {
   if (ds.consecutive_days >= 30) return "🎓 Graduate";
   if (ds.consecutive_days >= 14) return "🗝️ Finder";
   if (ds.consecutive_days >= 7) return "🔥 Devoted";
@@ -100,9 +104,7 @@ function ReadingResultView({
             <Detail.Metadata.TagList.Item
               text={`${ds.consecutive_days}d streak`}
               color={
-                ds.consecutive_days >= 7
-                  ? Color.Green
-                  : Color.SecondaryText
+                ds.consecutive_days >= 7 ? Color.Green : Color.SecondaryText
               }
             />
             <Detail.Metadata.TagList.Item
@@ -125,10 +127,7 @@ function ReadingResultView({
             title="Total Visits"
             text={String(ds.total_visits)}
           />
-          <Detail.Metadata.Label
-            title="First Visit"
-            text={ds.first_visit}
-          />
+          <Detail.Metadata.Label title="First Visit" text={ds.first_visit} />
         </Detail.Metadata>
       }
       actions={

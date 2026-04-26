@@ -173,7 +173,9 @@ export function OnboardingForm(props: OnboardingFormProps) {
     clearDashboardCache();
     setExistingApiKey(remainingSecureApiKey);
     setExistingBaseUrl(DEFAULT_BASE_URL);
-    setApiKeyStorageMode(result.apiKeyStorageMode === "preference" ? "preference" : "none");
+    setApiKeyStorageMode(
+      result.apiKeyStorageMode === "preference" ? "preference" : "none",
+    );
     setApiKey("");
 
     await showToast({
@@ -216,7 +218,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
       isLoading={isLoading || isSubmitting}
       actions={
         <ActionPanel>
-        <Action.SubmitForm
+          <Action.SubmitForm
             title={
               existingApiKey
                 ? "Validate and Replace Key"

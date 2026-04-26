@@ -109,14 +109,10 @@ export function EngineExecutionForm({
       );
       const response =
         engine.id === "tarot"
-          ? await calculateTarot(
-              config,
-              requestPayload,
-              {
-                question: values.tarotQuestion,
-                spread: values.tarotSpread,
-              },
-            )
+          ? await calculateTarot(config, requestPayload, {
+              question: values.tarotQuestion,
+              spread: values.tarotSpread,
+            })
           : await calculateEngine(config, engine.id, requestPayload);
       await syncDashboardSnapshot({ force: true });
       setResult({ result: response, requestJson });
@@ -425,7 +421,9 @@ function ExecutionForm({
   const [precision, setPrecision] = useState<PrecisionLevel>(
     initialValues.precision,
   );
-  const [tarotQuestion, setTarotQuestion] = useState(initialValues.tarotQuestion);
+  const [tarotQuestion, setTarotQuestion] = useState(
+    initialValues.tarotQuestion,
+  );
   const [tarotSpread, setTarotSpread] = useState<TarotSpreadVariant>(
     initialValues.tarotSpread,
   );

@@ -133,11 +133,20 @@ test("buildPulseBoardMarkdown explains when personal pulse sections need profile
 
   const markdown = buildPulseBoardMarkdown(snapshot, "vimshottari");
 
-  assert.match(markdown, /- Summary: Add birth data in Profile to unlock vimshottari pulse\./);
+  assert.match(
+    markdown,
+    /- Summary: Add birth data in Profile to unlock vimshottari pulse\./,
+  );
   assert.match(markdown, /## Biorhythm/);
-  assert.match(markdown, /- Add birth data in Profile to unlock biorhythm pulse\./);
+  assert.match(
+    markdown,
+    /- Add birth data in Profile to unlock biorhythm pulse\./,
+  );
   assert.match(markdown, /## Vimshottari/);
-  assert.match(markdown, /- Add birth data in Profile to unlock vimshottari pulse\./);
+  assert.match(
+    markdown,
+    /- Add birth data in Profile to unlock vimshottari pulse\./,
+  );
 });
 
 test("buildPulseBoardMarkdown lists dashboard and pulse sync issues when present", () => {
@@ -169,5 +178,8 @@ test("buildPulseBoardMarkdown lists dashboard and pulse sync issues when present
   assert.match(markdown, /## Dashboard Issues/);
   assert.match(markdown, /- profile \(selemene\): Profile refresh timed out\./);
   assert.match(markdown, /## Pulse Issues/);
-  assert.match(markdown, /- biorhythm \(witness\): Witness gateway unavailable\./);
+  assert.match(
+    markdown,
+    /- biorhythm \(witness\): Witness gateway unavailable\./,
+  );
 });

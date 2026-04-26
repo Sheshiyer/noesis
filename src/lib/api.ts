@@ -314,12 +314,12 @@ export async function fetchRemoteSnapshot(
   ]);
 
   syncIssues.push(
-    ...[
+    ...([
       profileResponse.issue,
       usageResponse.issue,
       readingsResponse.issue,
       readingStatsResponse.issue,
-    ].filter(Boolean) as SyncIssue[],
+    ].filter(Boolean) as SyncIssue[]),
   );
 
   return {
@@ -666,7 +666,9 @@ function normalizeExecutionError(
 
   switch (error.kind) {
     case "timeout":
-      return new Error("Witness gateway request timed out. Try again in a moment.");
+      return new Error(
+        "Witness gateway request timed out. Try again in a moment.",
+      );
     case "network":
       return new Error(error.message);
     case "parse":
@@ -814,7 +816,9 @@ function toCachedReadingPayload(
         : undefined;
   const payload: Record<string, unknown> = {
     engine_id: reading.engine_id,
-    ...(reading.witness_prompt ? { witness_prompt: reading.witness_prompt } : {}),
+    ...(reading.witness_prompt
+      ? { witness_prompt: reading.witness_prompt }
+      : {}),
     ...(typeof reading.consciousness_level === "number"
       ? { consciousness_level: reading.consciousness_level }
       : {}),
@@ -875,10 +879,13 @@ function toWorkflowExecutionResult(
   const engineOutputs = Object.fromEntries(
     Object.entries(rawOutputs).map(([engineId, value]) => [
       engineId,
-      toEngineExecutionResult({
-        engine_id: engineId,
-        ...(asRecord(value) ?? {}),
-      }, route),
+      toEngineExecutionResult(
+        {
+          engine_id: engineId,
+          ...(asRecord(value) ?? {}),
+        },
+        route,
+      ),
     ]),
   );
 
@@ -946,7 +953,9 @@ function toExecutionRequest(
   return request;
 }
 
-function normalizeTarotSpreadVariant(spread: TarotSpreadVariant): TarotSpreadVariant {
+function normalizeTarotSpreadVariant(
+  spread: TarotSpreadVariant,
+): TarotSpreadVariant {
   switch (spread) {
     case "single_card":
     case "three_card":

@@ -117,10 +117,7 @@ export async function requestJson<T>(
       throw error;
     }
 
-    if (
-      timedOut ||
-      (error instanceof Error && error.name === "AbortError")
-    ) {
+    if (timedOut || (error instanceof Error && error.name === "AbortError")) {
       throw new JsonRequestError(
         `${describeTarget(options.target)} request timed out after ${timeoutMs}ms.`,
         "timeout",

@@ -62,7 +62,8 @@ export function buildReadingResultMarkdown(
   const normalized = toEngineExecutionResultFromReading(reading);
 
   return buildEngineResultMarkdown(
-    truncate(reading.witnessPrompt, 60) || humanizeKey(reading.engineId),
+    truncate(reading.witnessPrompt, expanded ? 120 : 60) ||
+      humanizeKey(reading.engineId),
     normalized,
     {
       requestPayload: extractReadingRequestContext(reading.payload),
@@ -1100,9 +1101,7 @@ function readStringArray(value: unknown): string[] {
   );
 }
 
-function compactMarkdown(
-  lines: Array<string | null | undefined>,
-): string[] {
+function compactMarkdown(lines: Array<string | null | undefined>): string[] {
   const compact: string[] = [];
 
   for (const line of lines) {

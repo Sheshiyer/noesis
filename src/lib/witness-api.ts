@@ -134,7 +134,9 @@ async function witnessRequest<T>(
 
     switch (error.kind) {
       case "timeout":
-        throw new Error("Witness API request timed out. Try again in a moment.");
+        throw new Error(
+          "Witness API request timed out. Try again in a moment.",
+        );
       case "network":
         throw new Error(error.message);
       case "parse":

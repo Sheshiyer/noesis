@@ -406,10 +406,10 @@ export function ReadingsBrowser(props: ReadingsBrowserProps) {
                 },
               ]}
               detail={
-                  <List.Item.Detail
-                    markdown={buildReadingMarkdown(reading)}
-                    metadata={buildReadingMetadata(reading, snapshot)}
-                  />
+                <List.Item.Detail
+                  markdown={buildReadingMarkdown(reading)}
+                  metadata={buildReadingMetadata(reading, snapshot)}
+                />
               }
               actions={
                 <NoesisActionPanel

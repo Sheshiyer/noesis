@@ -7,7 +7,6 @@ import {
 import {
   DashboardSnapshot,
   MenuBarInsightKind,
-  MenuBarInsightSnapshot,
   MenuBarSnapshot,
 } from "./types";
 
@@ -67,7 +66,12 @@ export function buildPulseBoardMarkdown(
         ["Organ", insights.vedicClock?.title],
         ["Window", insights.vedicClock?.subtitle],
         ["Focus", insights.vedicClock?.summary],
-        ["Next refresh", insights.vedicClock?.refreshAfter ? formatTimeUntil(insights.vedicClock.refreshAfter) : undefined],
+        [
+          "Next refresh",
+          insights.vedicClock?.refreshAfter
+            ? formatTimeUntil(insights.vedicClock.refreshAfter)
+            : undefined,
+        ],
         [
           "Cached",
           insights.vedicClock?.fetchedAt

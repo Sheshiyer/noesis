@@ -47,7 +47,9 @@ export async function getStoredApiKey(): Promise<string> {
 }
 
 export async function getLegacyStoredApiKey(): Promise<string> {
-  return ((await LocalStorage.getItem<string>(API_KEY_STORAGE_KEY)) ?? "").trim();
+  return (
+    (await LocalStorage.getItem<string>(API_KEY_STORAGE_KEY)) ?? ""
+  ).trim();
 }
 
 export async function getApiKeyStorageMode(): Promise<ApiKeyStorageMode> {
