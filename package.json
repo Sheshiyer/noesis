@@ -94,6 +94,7 @@
     {
       "name": "cacheRawPayloads",
       "title": "Store Raw Payloads",
+      "label": "Keep full raw result JSON in the local cache",
       "description": "Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads.",
       "type": "checkbox",
       "required": false,
