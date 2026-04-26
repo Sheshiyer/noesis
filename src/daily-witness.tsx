@@ -14,9 +14,8 @@ import {
   getReading,
   WitnessReadingRequest,
   WitnessReadingResponse,
-  WitnessReading,
-  WitnessEngineReading,
 } from "./lib/witness-api";
+import { buildWitnessReadingMarkdown as buildWitnessMarkdown } from "./lib/execution-result-presenter";
 import { useDashboardSnapshot } from "./lib/use-dashboard-snapshot";
 import { DashboardSnapshot } from "./lib/types";
 
@@ -47,13 +46,6 @@ function buildInitialValues(
   };
 }
 
-const ENGINE_ICONS: Record<string, string> = {
-  panchanga: "🪷",
-  biorhythm: "🫀",
-  "vedic-clock": "⏳",
-  numerology: "🔢",
-};
-
 function narrativeLabel(ds: { consecutive_days: number; total_visits: number }): string {
   if (ds.consecutive_days >= 30) return "🎓 Graduate";
   if (ds.consecutive_days >= 14) return "🗝️ Finder";
@@ -63,89 +55,7 @@ function narrativeLabel(ds: { consecutive_days: number; total_visits: number }):
 }
 
 function buildReadingMarkdown(resp: WitnessReadingResponse): string {
-  const r = resp.reading;
-  const ds = r.decoder_state;
-  const lines: string[] = [];
-
-  // Header
-  lines.push(`# Daily Witness — ${r.date}`);
-  lines.push("");
-  lines.push(
-    `> ${ENGINE_ICONS[r.primary_engine] ?? "🔮"} Engine of the Day: **${r.primary_engine}** · ${narrativeLabel(ds)} · ${ds.consecutive_days} day streak`,
-  );
-  lines.push("");
-
-  // Decoder progress
-  const maxLayer = r.max_layer_unlocked;
-  const progress = Array.from({ length: 5 }, (_, i) =>
-    i < maxLayer ? "▓" : "░",
-  ).join("");
-  lines.push(
-    `**Decoder** ${progress} Layer ${maxLayer}/5 · ${ds.total_visits} visits`,
-  );
-  lines.push("---");
-  lines.push("");
-
-  // Primary reading
-  const pr = r.primary_reading;
-  lines.push(`## ${ENGINE_ICONS[pr.engine_id] ?? "🔮"} ${pr.engine_id} — ${pr.headline}`);
-  lines.push("");
-
-  // Data points table
-  const emphasized = pr.data_points.filter((dp) => dp.emphasis);
-  const secondary = pr.data_points.filter((dp) => !dp.emphasis);
-
-  if (emphasized.length) {
-    for (const dp of emphasized) {
-      lines.push(`- **${dp.label}**: ${dp.value}`);
-    }
-    lines.push("");
-  }
-  if (secondary.length) {
-    for (const dp of secondary) {
-      lines.push(`- ${dp.label}: ${dp.value}`);
-    }
-    lines.push("");
-  }
-
-  // Witness question (if Layer 2 unlocked)
-  if (pr.witness_question) {
-    lines.push("### 🔮 Witness Question");
-    lines.push("");
-    lines.push(`> *${pr.witness_question}*`);
-    lines.push("");
-  }
-
-  // Other engines
-  const others = Object.entries(r.all_readings).filter(
-    ([eid]) => eid !== r.primary_engine,
-  );
-  if (others.length) {
-    lines.push("---");
-    lines.push("## Other Engines");
-    lines.push("");
-    for (const [eid, eng] of others) {
-      const icon = ENGINE_ICONS[eid] ?? "🔮";
-      lines.push(`### ${icon} ${eid}`);
-      lines.push(`**${eng.headline}**`);
-      lines.push("");
-      for (const dp of eng.data_points.filter((d) => d.emphasis)) {
-        lines.push(`- **${dp.label}**: ${dp.value}`);
-      }
-      if (eng.witness_question) {
-        lines.push(`> *${eng.witness_question}*`);
-      }
-      lines.push("");
-    }
-  }
-
-  // Footer
-  lines.push("---");
-  lines.push(
-    `*Generated in ${r.total_latency_ms}ms · ${r.engines_called.length} engines · ${new Date().toLocaleTimeString()}*`,
-  );
-
-  return lines.join("\n");
+  return buildWitnessMarkdown(resp);
 }
 
 // ─── Reading Result View ────────────────────────────────────────────────

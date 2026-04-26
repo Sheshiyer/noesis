@@ -4,10 +4,9 @@
  */
 
 import { getPreferenceValues, LocalStorage } from "@raycast/api";
-
-interface WitnessPreferences {
-  witnessUrl?: string;
-}
+import { JsonRequestError, requestJson } from "./http";
+import { SelemenePreferences } from "./types";
+import { trimTrailingSlash } from "./urls";
 
 // ─── Types ──────────────────────────────────────────────────────────────
 
@@ -91,22 +90,25 @@ export interface WitnessApiError {
 const WITNESS_URL_KEY = "noesis.witnessUrl";
 const DEFAULT_WITNESS_URL = "https://48.tryambakam.space";
 
-export async function getWitnessUrl(): Promise<string> {
-  const stored = (
-    (await LocalStorage.getItem<string>(WITNESS_URL_KEY)) ?? ""
-  ).trim();
-  if (stored) return stored.replace(/\/+$/, "");
-
-  const preferences = getPreferenceValues<WitnessPreferences>();
+export function getConfiguredWitnessUrl(): string {
+  const preferences = getPreferenceValues<SelemenePreferences>();
   return (
-    preferences.witnessUrl?.trim().replace(/\/+$/, "") ||
-    process.env.WITNESS_API_URL?.trim().replace(/\/+$/, "") ||
+    trimTrailingSlash(preferences.witnessUrl ?? "") ||
+    trimTrailingSlash(process.env.WITNESS_API_URL ?? "") ||
     DEFAULT_WITNESS_URL
   );
 }
 
+export async function getWitnessUrl(): Promise<string> {
+  const stored = (
+    (await LocalStorage.getItem<string>(WITNESS_URL_KEY)) ?? ""
+  ).trim();
+  if (stored) return trimTrailingSlash(stored);
+  return getConfiguredWitnessUrl();
+}
+
 export async function setWitnessUrl(url: string): Promise<void> {
-  await LocalStorage.setItem(WITNESS_URL_KEY, url.trim().replace(/\/+$/, ""));
+  await LocalStorage.setItem(WITNESS_URL_KEY, trimTrailingSlash(url));
 }
 
 // ─── API Client ─────────────────────────────────────────────────────────
@@ -115,31 +117,40 @@ async function witnessRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const baseUrl = await getWitnessUrl();
-  const url = `${baseUrl}${path}`;
-
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
-
-  if (!response.ok) {
-    let errorBody: WitnessApiError | undefined;
-    try {
-      errorBody = (await response.json()) as WitnessApiError;
-    } catch {
-      // ignore parse errors
+  try {
+    const response = await requestJson<T>({
+      target: "witness",
+      baseUrl: await getWitnessUrl(),
+      path,
+      method: options.method ?? "GET",
+      headers: options.headers,
+      body: typeof options.body === "string" ? options.body : undefined,
+    });
+    return response.payload;
+  } catch (error) {
+    if (!(error instanceof JsonRequestError)) {
+      throw error instanceof Error ? error : new Error("Unknown Witness error");
     }
-    throw new Error(
-      errorBody?.error ||
-        `Witness API error: ${response.status} ${response.statusText}`,
-    );
-  }
 
-  return (await response.json()) as T;
+    switch (error.kind) {
+      case "timeout":
+        throw new Error("Witness API request timed out. Try again in a moment.");
+      case "network":
+        throw new Error(error.message);
+      case "parse":
+        throw new Error(
+          "Witness API returned an unreadable response. Check the gateway for malformed JSON.",
+        );
+      case "http":
+      default: {
+        const payload = toWitnessApiError(error.payload);
+        throw new Error(
+          payload.error ||
+            `Witness API error: ${error.status ?? 500}${error.bodyText ? ` ${truncateBodyText(error.bodyText)}` : ""}`,
+        );
+      }
+    }
+  }
 }
 
 export async function getProductInfo(): Promise<WitnessProductInfo> {
@@ -162,4 +173,19 @@ export async function checkHealth(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+function toWitnessApiError(value: unknown): WitnessApiError {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as WitnessApiError)
+    : { error: "", code: "" };
+}
+
+function truncateBodyText(value?: string): string {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.length > 160 ? `${trimmed.slice(0, 157)}...` : trimmed;
 }

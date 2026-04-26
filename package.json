@@ -2,22 +2,26 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "noesis",
   "title": "Tryambakam Noesis",
-  "description": "Raycast command center for Tryambakam Noesis, powered by the Selemene Engine",
+  "description": "Native Raycast console for Tryambakam Noesis: run Selemene readings, workflows, Daily Witness, and pulse insights with local history.",
   "icon": "icon.png",
   "author": "mage_narayan",
+  "homepage": "https://github.com/Sheshiyer/noesis#readme",
+  "repository": "https://github.com/Sheshiyer/noesis",
+  "bugs": "https://github.com/Sheshiyer/noesis/issues",
   "platforms": [
     "macOS"
   ],
   "keywords": [
     "tryambakam",
-    "selemene",
     "noesis",
-    "kha-ba-la",
-    "self-consciousness",
+    "raycast",
+    "selemene",
     "readings",
-    "engines",
     "workflows",
-    "pulse"
+    "daily-witness",
+    "pulse",
+    "menu-bar",
+    "self-consciousness"
   ],
   "categories": [
     "Developer Tools"
@@ -25,12 +29,75 @@
   "license": "MIT",
   "preferences": [
     {
+      "name": "apiKey",
+      "title": "Selemene Engine API Key",
+      "description": "Secure password preference for the Selemene Engine key. Preferred over legacy local storage.",
+      "type": "password",
+      "required": false
+    },
+    {
       "name": "baseUrl",
       "title": "Selemene Engine Base URL",
       "description": "Optional fallback API URL when onboarding has not stored one yet.",
       "type": "textfield",
       "required": false,
       "default": "https://selemene.tryambakam.space"
+    },
+    {
+      "name": "witnessUrl",
+      "title": "Daily Witness API URL",
+      "description": "Trusted Witness gateway URL used only when the execution route preference is set to Witness.",
+      "type": "textfield",
+      "required": false,
+      "default": "https://48.tryambakam.space"
+    },
+    {
+      "name": "executionRoute",
+      "title": "Execution Route",
+      "description": "Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway.",
+      "type": "dropdown",
+      "required": false,
+      "default": "selemene",
+      "data": [
+        {
+          "title": "Selemene Direct",
+          "value": "selemene"
+        },
+        {
+          "title": "Witness Gateway",
+          "value": "witness"
+        }
+      ]
+    },
+    {
+      "name": "readingHistoryLimit",
+      "title": "Reading History Cache",
+      "description": "Maximum number of reading rows to keep in the local SQLite cache.",
+      "type": "dropdown",
+      "required": false,
+      "default": "50",
+      "data": [
+        {
+          "title": "25 Readings",
+          "value": "25"
+        },
+        {
+          "title": "50 Readings",
+          "value": "50"
+        },
+        {
+          "title": "100 Readings",
+          "value": "100"
+        }
+      ]
+    },
+    {
+      "name": "cacheRawPayloads",
+      "title": "Store Raw Payloads",
+      "description": "Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads.",
+      "type": "checkbox",
+      "required": false,
+      "default": false
     },
     {
       "name": "pulseMode",
@@ -53,14 +120,6 @@
           "value": "vimshottari"
         }
       ]
-    },
-    {
-      "name": "witnessUrl",
-      "title": "Daily Witness API URL",
-      "description": "URL for the Daily Witness service. Defaults to 48.tryambakam.space.",
-      "type": "textfield",
-      "required": false,
-      "default": "https://48.tryambakam.space"
     }
   ],
   "commands": [

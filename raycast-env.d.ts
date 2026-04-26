@@ -8,8 +8,18 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
+  /** Selemene Engine API Key - Secure password preference for the Selemene Engine key. Preferred over legacy local storage. */
+  "apiKey"?: string,
   /** Selemene Engine Base URL - Optional fallback API URL when onboarding has not stored one yet. */
   "baseUrl": string,
+  /** Daily Witness API URL - Trusted Witness gateway URL used only when the execution route preference is set to Witness. */
+  "witnessUrl": string,
+  /** Execution Route - Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway. */
+  "executionRoute": "selemene" | "witness",
+  /** Reading History Cache - Maximum number of reading rows to keep in the local SQLite cache. */
+  "readingHistoryLimit": "25" | "50" | "100",
+  /** Store Raw Payloads - Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads. */
+  "cacheRawPayloads": boolean,
   /** Pulse Title Mode - Choose which current insight the menu bar title should prioritize. */
   "pulseMode": "vedicClock" | "biorhythm" | "vimshottari"
 }
@@ -30,6 +40,8 @@ declare namespace Preferences {
   export type Profile = ExtensionPreferences & {}
   /** Preferences accessible in the `api-key` command */
   export type ApiKey = ExtensionPreferences & {}
+  /** Preferences accessible in the `daily-witness` command */
+  export type DailyWitness = ExtensionPreferences & {}
   /** Preferences accessible in the `menubar` command */
   export type Menubar = ExtensionPreferences & {}
 }
@@ -47,6 +59,8 @@ declare namespace Arguments {
   export type Profile = {}
   /** Arguments passed to the `api-key` command */
   export type ApiKey = {}
+  /** Arguments passed to the `daily-witness` command */
+  export type DailyWitness = {}
   /** Arguments passed to the `menubar` command */
   export type Menubar = {}
 }
