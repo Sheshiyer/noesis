@@ -11,6 +11,24 @@ import {
   withTarotExecutionOptions,
 } from "./api";
 
+async function withExecutionRoute<T>(
+  route: "selemene" | "witness",
+  run: () => Promise<T>,
+): Promise<T> {
+  const previous = process.env.NOESIS_EXECUTION_ROUTE;
+  process.env.NOESIS_EXECUTION_ROUTE = route;
+
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) {
+      delete process.env.NOESIS_EXECUTION_ROUTE;
+    } else {
+      process.env.NOESIS_EXECUTION_ROUTE = previous;
+    }
+  }
+}
+
 test("normalizeBaseUrl strips trailing slash and api/v1 suffix", () => {
   assert.equal(
     normalizeBaseUrl("https://selemene.tryambakam.space/api/v1/"),
@@ -326,41 +344,67 @@ test("fetchRemoteSnapshot surfaces auth failures clearly", async () => {
 });
 
 test("calculateEngine posts execution input and maps the engine result", async () => {
-  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  await withExecutionRoute("selemene", async () => {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
 
-  const fetchStub = (async (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
-    calls.push({ url, init });
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      calls.push({ url, init });
 
-    return new Response(
-      JSON.stringify({
-        engine_id: "tarot",
-        result: { card: "The Hermit" },
-        witness_prompt: "Withdraw and listen carefully.",
-        consciousness_level: 5,
-        metadata: { spread: "single-card", calculation_time_ms: 27.1 },
-        timestamp: "2026-04-22T13:14:15Z",
-      }),
-      { status: 200 },
+      return new Response(
+        JSON.stringify({
+          engine_id: "tarot",
+          result: { card: "The Hermit" },
+          witness_prompt: "Withdraw and listen carefully.",
+          consciousness_level: 5,
+          metadata: { spread: "single-card", calculation_time_ms: 27.1 },
+          timestamp: "2026-04-22T13:14:15Z",
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await calculateEngine(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "tarot",
+      {
+        birthData: {
+          name: "Witness User",
+          date: "1991-08-24",
+          time: "03:45:00",
+          latitude: 12.9716,
+          longitude: 77.5946,
+          timezone: "Asia/Kolkata",
+        },
+        currentTime: "2026-04-22T13:00:00Z",
+        precision: "High",
+        options: {
+          question: "What needs attention?",
+        },
+      },
+      fetchStub,
     );
-  }) as typeof fetch;
 
-  const result = await calculateEngine(
-    {
-      baseUrl: "https://selemene.tryambakam.space",
-      apiKey: "nk_test_key",
-    },
-    "tarot",
-    {
-      birthData: {
+    assert.equal(
+      calls[0]?.url,
+      "https://selemene.tryambakam.space/api/v1/engines/tarot/calculate",
+    );
+    const headers = new Headers(calls[0]?.init?.headers);
+    assert.equal(headers.get("X-API-Key"), "nk_test_key");
+    assert.equal(headers.get("Content-Type"), "application/json");
+    assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      birth_data: {
         name: "Witness User",
         date: "1991-08-24",
         time: "03:45:00",
@@ -368,44 +412,105 @@ test("calculateEngine posts execution input and maps the engine result", async (
         longitude: 77.5946,
         timezone: "Asia/Kolkata",
       },
-      currentTime: "2026-04-22T13:00:00Z",
+      current_time: "2026-04-22T13:00:00Z",
       precision: "High",
       options: {
         question: "What needs attention?",
       },
-    },
-    fetchStub,
-  );
-
-  assert.equal(
-    calls[0]?.url,
-    "https://selemene.tryambakam.space/api/v1/engines/tarot/calculate",
-  );
-  const headers = new Headers(calls[0]?.init?.headers);
-  assert.equal(headers.get("X-API-Key"), "nk_test_key");
-  assert.equal(headers.get("Content-Type"), "application/json");
-  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    birth_data: {
-      name: "Witness User",
-      date: "1991-08-24",
-      time: "03:45:00",
-      latitude: 12.9716,
-      longitude: 77.5946,
-      timezone: "Asia/Kolkata",
-    },
-    current_time: "2026-04-22T13:00:00Z",
-    precision: "High",
-    options: {
-      question: "What needs attention?",
-    },
+    });
+    assert.equal(result.engineId, "tarot");
+    assert.equal(result.witnessPrompt, "Withdraw and listen carefully.");
+    assert.equal(result.result.card, "The Hermit");
+    assert.equal(result.metadata.spread, "single-card");
+    assert.equal(result.timestamp, "2026-04-22T13:14:15Z");
+    assert.equal(result.route?.target, "selemene");
+    assert.equal(result.route?.label, "Selemene Direct");
   });
-  assert.equal(result.engineId, "tarot");
-  assert.equal(result.witnessPrompt, "Withdraw and listen carefully.");
-  assert.equal(result.result.card, "The Hermit");
-  assert.equal(result.metadata.spread, "single-card");
-  assert.equal(result.timestamp, "2026-04-22T13:14:15Z");
-  assert.equal(result.route?.target, "selemene");
-  assert.equal(result.route?.label, "Selemene Direct");
+});
+
+test("calculateEngine prefers witness dyad response on the default route", async () => {
+  await withExecutionRoute("witness", async () => {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      calls.push({ url, init });
+
+      return new Response(
+        JSON.stringify({
+          engine_id: "biorhythm",
+          result: {
+            overall_energy: 88,
+            physical: { percentage: 92, phase: "Rising" },
+          },
+          witness_prompt: "Raw engine prompt should not win.",
+          witness_layer: {
+            response:
+              "Your body is ready. Bring that readiness into one concrete act.",
+            synthesis:
+              "Action is available, but it needs conscious direction.",
+            aletheios: {
+              perspective: "Your momentum is real.",
+            },
+            pichet: {
+              perspective: "Choose one honest action instead of three impulses.",
+            },
+          },
+          metadata: { calculation_time_ms: 11.2 },
+          timestamp: "2026-05-01T03:00:00Z",
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await calculateEngine(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "biorhythm",
+      {
+        birthData: {
+          date: "1991-08-24",
+          time: "03:45:00",
+          timezone: "Asia/Kolkata",
+        },
+      },
+      fetchStub,
+    );
+
+    assert.equal(
+      calls[0]?.url,
+      "https://48.tryambakam.space/api/v1/engines/biorhythm/calculate",
+    );
+    const headers = new Headers(calls[0]?.init?.headers);
+    assert.equal(headers.get("X-API-Key"), null);
+    assert.equal(
+      result.witnessPrompt,
+      "Your body is ready. Bring that readiness into one concrete act.",
+    );
+    assert.deepEqual(result.witnessLayer, {
+      response:
+        "Your body is ready. Bring that readiness into one concrete act.",
+      synthesis: "Action is available, but it needs conscious direction.",
+      aletheios: {
+        perspective: "Your momentum is real.",
+      },
+      pichet: {
+        perspective: "Choose one honest action instead of three impulses.",
+      },
+    });
+    assert.equal(result.route?.target, "witness");
+    assert.equal(result.route?.label, "Witness Gateway");
+  });
 });
 
 test("withTarotExecutionOptions merges and normalizes tarot options", () => {
@@ -430,116 +535,137 @@ test("withTarotExecutionOptions merges and normalizes tarot options", () => {
 });
 
 test("calculateTarot posts canonical spread and question", async () => {
-  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  await withExecutionRoute("selemene", async () => {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
 
-  const fetchStub = (async (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
-    calls.push({ url, init });
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      calls.push({ url, init });
 
-    return new Response(
-      JSON.stringify({
-        engine_id: "tarot",
-        result: { spread: "yes_no" },
-        metadata: { spread: "yes_no", calculation_time_ms: 12.2 },
-      }),
-      { status: 200 },
+      return new Response(
+        JSON.stringify({
+          engine_id: "tarot",
+          result: { spread: "yes_no" },
+          metadata: { spread: "yes_no", calculation_time_ms: 12.2 },
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await calculateTarot(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      {
+        precision: "High",
+        options: {
+          context: "decision",
+        },
+      },
+      {
+        question: "Should I move now?",
+        spread: "yes_no",
+      },
+      fetchStub,
     );
-  }) as typeof fetch;
 
-  const result = await calculateTarot(
-    {
-      baseUrl: "https://selemene.tryambakam.space",
-      apiKey: "nk_test_key",
-    },
-    {
+    assert.equal(
+      calls[0]?.url,
+      "https://selemene.tryambakam.space/api/v1/engines/tarot/calculate",
+    );
+    assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
       precision: "High",
       options: {
         context: "decision",
+        question: "Should I move now?",
+        spread: "yes_no",
       },
-    },
-    {
-      question: "Should I move now?",
-      spread: "yes_no",
-    },
-    fetchStub,
-  );
-
-  assert.equal(
-    calls[0]?.url,
-    "https://selemene.tryambakam.space/api/v1/engines/tarot/calculate",
-  );
-  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    precision: "High",
-    options: {
-      context: "decision",
-      question: "Should I move now?",
-      spread: "yes_no",
-    },
+    });
+    assert.equal(result.engineId, "tarot");
+    assert.equal(result.metadata.spread, "yes_no");
   });
-  assert.equal(result.engineId, "tarot");
-  assert.equal(result.metadata.spread, "yes_no");
 });
 
 test("executeWorkflow posts execution input and maps workflow outputs", async () => {
-  const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+  await withExecutionRoute("selemene", async () => {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
 
-  const fetchStub = (async (
-    input: string | URL | Request,
-    init?: RequestInit,
-  ) => {
-    const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
-    calls.push({ url, init });
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      calls.push({ url, init });
 
-    return new Response(
-      JSON.stringify({
-        workflow_id: "daily-practice",
-        engine_outputs: {
-          panchanga: {
-            result: { tithi: "Ekadashi" },
-            witness_prompt: "Observe the fasting current.",
-            metadata: { calculation_time_ms: 12.5 },
+      return new Response(
+        JSON.stringify({
+          workflow_id: "daily-practice",
+          engine_outputs: {
+            panchanga: {
+              result: { tithi: "Ekadashi" },
+              witness_prompt: "Observe the fasting current.",
+              metadata: { calculation_time_ms: 12.5 },
+            },
+            numerology: {
+              result: { life_path: 9 },
+              witness_prompt: "Completion energy is dominant.",
+              consciousness_level: 4,
+              metadata: { calculation_time_ms: 8.1 },
+            },
           },
-          numerology: {
-            result: { life_path: 9 },
-            witness_prompt: "Completion energy is dominant.",
-            consciousness_level: 4,
-            metadata: { calculation_time_ms: 8.1 },
+          synthesis: {
+            summary: "A reflective and disciplined day.",
           },
+          witness_layer: {
+            witness_question: "What quiet discipline wants expression today?",
+          },
+          total_time_ms: 25.4,
+          timestamp: "2026-04-22T13:15:00Z",
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await executeWorkflow(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "daily-practice",
+      {
+        birthData: {
+          date: "1991-08-24",
+          time: "03:45:00",
+          timezone: "Asia/Kolkata",
         },
-        synthesis: {
-          summary: "A reflective and disciplined day.",
+        precision: "Standard",
+        options: {
+          mode: "daily",
         },
-        witness_layer: {
-          witness_question: "What quiet discipline wants expression today?",
-        },
-        total_time_ms: 25.4,
-        timestamp: "2026-04-22T13:15:00Z",
-      }),
-      { status: 200 },
+      },
+      fetchStub,
     );
-  }) as typeof fetch;
 
-  const result = await executeWorkflow(
-    {
-      baseUrl: "https://selemene.tryambakam.space",
-      apiKey: "nk_test_key",
-    },
-    "daily-practice",
-    {
-      birthData: {
+    assert.equal(
+      calls[0]?.url,
+      "https://selemene.tryambakam.space/api/v1/workflows/daily-practice/execute",
+    );
+    assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      birth_data: {
         date: "1991-08-24",
         time: "03:45:00",
         timezone: "Asia/Kolkata",
@@ -548,34 +674,110 @@ test("executeWorkflow posts execution input and maps workflow outputs", async ()
       options: {
         mode: "daily",
       },
-    },
-    fetchStub,
-  );
+    });
+    assert.equal(result.workflowId, "daily-practice");
+    assert.equal(result.engineOutputs.panchanga?.engineId, "panchanga");
+    assert.equal(result.engineOutputs.numerology?.consciousnessLevel, 4);
+    assert.equal(result.synthesis.summary, "A reflective and disciplined day.");
+    assert.deepEqual(result.synthesis.witness_layer, {
+      witness_question: "What quiet discipline wants expression today?",
+    });
+    assert.equal(result.totalTimeMs, 25.4);
+    assert.equal(result.route?.target, "selemene");
+  });
+});
 
-  assert.equal(
-    calls[0]?.url,
-    "https://selemene.tryambakam.space/api/v1/workflows/daily-practice/execute",
-  );
-  assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
-    birth_data: {
-      date: "1991-08-24",
-      time: "03:45:00",
-      timezone: "Asia/Kolkata",
-    },
-    precision: "Standard",
-    options: {
-      mode: "daily",
-    },
+test("executeWorkflow preserves witness dyad fields on the default route", async () => {
+  await withExecutionRoute("witness", async () => {
+    const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
+
+    const fetchStub = (async (
+      input: string | URL | Request,
+      init?: RequestInit,
+    ) => {
+      const url =
+        typeof input === "string"
+          ? input
+          : input instanceof URL
+            ? input.toString()
+            : input.url;
+      calls.push({ url, init });
+
+      return new Response(
+        JSON.stringify({
+          workflow_id: "daily-practice",
+          engine_results: {
+            biorhythm: {
+              result: {
+                overall_energy: 84,
+              },
+              witness_layer: {
+                response:
+                  "Your body can carry more truth than your mind is admitting.",
+                synthesis:
+                  "Let the physical surplus steady the emotional field.",
+              },
+              metadata: { calculation_time_ms: 10.4 },
+            },
+          },
+          synthesis: {
+            summary: "A clear day for embodied honesty.",
+          },
+          witness_layer: {
+            response:
+              "You do not need a bigger plan today. You need one honest action.",
+            synthesis:
+              "Resolve the inner split by acting on what is already clear.",
+            pichet: {
+              perspective: "Keep it concrete.",
+            },
+          },
+          total_time_ms: 19.4,
+          timestamp: "2026-05-01T03:05:00Z",
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await executeWorkflow(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "daily-practice",
+      {
+        birthData: {
+          date: "1991-08-24",
+          timezone: "Asia/Kolkata",
+        },
+      },
+      fetchStub,
+    );
+
+    assert.equal(
+      calls[0]?.url,
+      "https://48.tryambakam.space/api/v1/workflows/daily-practice/execute",
+    );
+    assert.equal(
+      result.engineOutputs.biorhythm?.witnessPrompt,
+      "Your body can carry more truth than your mind is admitting.",
+    );
+    assert.deepEqual(result.engineOutputs.biorhythm?.witnessLayer, {
+      response:
+        "Your body can carry more truth than your mind is admitting.",
+      synthesis: "Let the physical surplus steady the emotional field.",
+    });
+    assert.deepEqual(result.synthesis.witness_layer, {
+      response:
+        "You do not need a bigger plan today. You need one honest action.",
+      synthesis:
+        "Resolve the inner split by acting on what is already clear.",
+      pichet: {
+        perspective: "Keep it concrete.",
+      },
+    });
+    assert.equal(result.route?.target, "witness");
   });
-  assert.equal(result.workflowId, "daily-practice");
-  assert.equal(result.engineOutputs.panchanga?.engineId, "panchanga");
-  assert.equal(result.engineOutputs.numerology?.consciousnessLevel, 4);
-  assert.equal(result.synthesis.summary, "A reflective and disciplined day.");
-  assert.deepEqual(result.synthesis.witness_layer, {
-    witness_question: "What quiet discipline wants expression today?",
-  });
-  assert.equal(result.totalTimeMs, 25.4);
-  assert.equal(result.route?.target, "selemene");
 });
 
 test("fetchRemoteSnapshot keeps partial failures as sync issues", async () => {

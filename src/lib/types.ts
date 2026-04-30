@@ -5,7 +5,7 @@ export interface SelemenePreferences {
   executionRoute?: ExecutionRouteTarget;
   readingHistoryLimit?: string;
   cacheRawPayloads?: boolean;
-  pulseMode?: MenuBarInsightKind;
+  pulseMode?: PulseModeKind;
 }
 
 export interface SelemeneClientConfig {
@@ -132,6 +132,7 @@ export interface EngineExecutionResult {
   engineId: string;
   result: Record<string, unknown>;
   witnessPrompt?: string;
+  witnessLayer?: Record<string, unknown>;
   consciousnessLevel?: number;
   metadata: Record<string, unknown>;
   timestamp?: string;
@@ -231,7 +232,9 @@ export interface RemoteSnapshot {
   fetchedAt: string;
 }
 
-export type MenuBarInsightKind = "vedicClock" | "biorhythm" | "vimshottari";
+export type PulseModeKind = "vedicClock" | "biorhythm" | "vimshottari";
+
+export type MenuBarInsightKind = PulseModeKind | "nadabrahman";
 
 export interface MenuBarInsightSnapshot {
   kind: MenuBarInsightKind;

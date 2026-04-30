@@ -22,6 +22,7 @@ import {
 } from "./types";
 import { describeTarget, JsonRequestError, requestJson } from "./http";
 import { getExecutionRoutePreference } from "./settings";
+import { getWitnessLayer, selectWitnessText } from "./witness-text";
 import { getWitnessUrl } from "./witness-api";
 import { normalizeBaseUrl } from "./urls";
 
@@ -791,7 +792,7 @@ function toReadingSummaries(
     engineId: reading.engine_id,
     workflowId: reading.workflow_id ?? undefined,
     inputHash: reading.input_hash,
-    witnessPrompt: reading.witness_prompt ?? undefined,
+    witnessPrompt: selectWitnessText(reading) ?? undefined,
     consciousnessLevel: reading.consciousness_level,
     calculationTimeMs: reading.calculation_time_ms ?? undefined,
     createdAt: reading.created_at,
@@ -851,15 +852,14 @@ function toEngineExecutionResult(
   payload: Record<string, unknown>,
   route?: ExecutionRouteInfo,
 ): EngineExecutionResult {
-  const witnessLayer = asRecord(payload.witness_layer);
-  const witnessPrompt =
-    readString(payload, "witness_prompt") ??
-    readString(witnessLayer, "witness_question");
+  const witnessLayer = getWitnessLayer(payload);
+  const witnessPrompt = selectWitnessText(payload);
 
   return {
     engineId: readString(payload, "engine_id") ?? "unknown-engine",
     result: (payload.result as Record<string, unknown> | undefined) ?? {},
     witnessPrompt,
+    witnessLayer,
     consciousnessLevel: readNumber(payload, "consciousness_level"),
     metadata: asRecord(payload.metadata),
     timestamp: readString(payload, "timestamp"),

@@ -1,3 +1,219 @@
+# 2026-05-01 Pulse-First UX Cleanup
+
+## Checklist
+
+- [x] Move cache, route, sync, and usage diagnostics out of the main dashboard flow into a dedicated `Developer Tools` section.
+- [x] Make the main dashboard labels and sections more user-facing around pulse, remedy, profile, and readings.
+- [x] Reorder the top-bar dropdown so pulse/remedy comes first and technical diagnostics are grouped lower as developer tools.
+- [x] Verify with TypeScript and a full Raycast build.
+
+## Spec
+
+- The default extension experience should feel like a pulse-reading product, not a debugging console.
+- User-facing sections should prioritize:
+  - current pulse
+  - derived remedy
+  - profile
+  - readings / flows
+- Technical details like base URL, execution route, cache state, rate limits, sync issues, and usage windows should remain accessible, but they should be grouped under an explicit developer/operator surface.
+
+## Review
+
+- Refactored `src/dashboard.tsx` so the top-level dashboard reads less like a service console. The user-facing labels are now more product-like (`Your Profile`, `Explore Engines`, `Guided Flows`), the pulse area has its own dedicated section, and the derived `NadaBrahman Remedy` is surfaced as a separate first-class item instead of being buried inside operator data.
+- Moved the technical operational items into a dedicated `Developer Tools` section on the dashboard. Connection/routing, usage/limits, and cache/sync remain available, but they are no longer mixed into the same section as the main pulse experience.
+- Reworked `src/menubar.tsx` so the dropdown stays pulse-first: source pulse signals, derived remedy, board summary, and core user actions come before diagnostics. Cache state, title mode, route, sync issues, and access-key maintenance now live under an explicit `Developer Tools` block lower in the menu.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+- I did not add a new focused test in this pass because the change was mainly UI composition and label/ordering cleanup rather than a new isolated pure helper. I also did not do a live Raycast click-through after this refactor.
+
+# 2026-05-01 Nadabrahman Result Mapping
+
+## Checklist
+
+- [x] Confirm the Nadabrahman request context (`birth_data`, `current_time`, `precision`) is visible in the result UI.
+- [x] Add a Nadabrahman-specific presenter surface for the live remedy response shape.
+- [x] Add a regression test using the real Nadabrahman request/result shape.
+- [x] Verify with TypeScript, focused presenter tests, and a full Raycast build.
+
+## Spec
+
+- Nadabrahman should not render as only a generic nested object dump.
+- The request context should clearly show the birth payload and execution timestamp the user supplied.
+- The result surface should prioritize the remedy-specific fields:
+  - primary raga
+  - prahar/time window
+  - mood
+  - therapeutic qualities
+  - ranked recommendations
+  - the real raw engine fields like `dosha_dominance`, `energy_quality`, `arohanam`, and `avarohanam`
+
+## Review
+
+- Clarified the payload split twice: first around the request context, then with the real raw engine output. The regression fixture now matches the actual Nadabrahman response contract the engine is returning.
+- Added a Nadabrahman-specific presenter in `src/lib/execution-result-presenter.ts`. Nadabrahman now gets a `Sonic Remedy` hero section with primary raga, prahar, time window, dosha dominance, energy quality, and mood, plus reading-brief lines for those same remedy signals.
+- Replaced the generic result-map fallback for Nadabrahman with a dedicated block. This fixed a concrete bug where `arohanam` and `avarohanam` were being truncated to four notes by the generic inline-array formatter; the full scales now render in the UI, along with humanized therapeutic qualities and recommendation fields.
+- Added a regression in `src/lib/execution-result-presenter.test.ts` using the exact raw Nadabrahman output shape you supplied. It proves the request payload renders `Birth Data`, `Current Time`, and `Precision`, and the result view renders the remedy-specific fields plus full note sequences.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-nadabrahman-presenter && mkdir -p /tmp/noesis-testbuild-20260501-nadabrahman-presenter && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-nadabrahman-presenter`
+  - `node --test /tmp/noesis-testbuild-20260501-nadabrahman-presenter/lib/execution-result-presenter.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
+# 2026-05-01 Pulse Cadence To NadaBrahman Remedy
+
+## Checklist
+
+- [x] Keep the current pulse cadence warmers on `vedic-clock`, `biorhythm`, and `vimshottari` as the source stage.
+- [x] Add a derived `nadabrahman` remedy stage that runs after pulse-source refreshes and uses the same birth/current-time context plus compact pulse cadence input.
+- [x] Surface the cached NadaBrahman remedy in the menu bar pulse view, dashboard pulse board, and pulse-related actions.
+- [x] Add regression coverage for remedy plan building, remedy insight mapping, and pulse-board presentation.
+- [x] Verify with TypeScript, focused tests, and a full Raycast build.
+
+## Spec
+
+- The three existing pulse engines remain the cadence inputs; they should not be replaced by Nadabrahman.
+- Once those source insights are available, Raycast should run `nadabrahman` as the derived remedy stage using:
+  - the shared birth/current-time context
+  - `precision` defaulting to `Standard` unless the profile has a valid precision preference
+  - a compact `options.pulse_cadence` object built from the cached source pulse summaries and key result fields
+- The pulse UI should keep the current title-mode concept for the source cadence, but the pulse board should also show the derived NadaBrahman remedy as the outcome of that cadence.
+
+## Review
+
+- Extended the pulse cache model so menu-bar insight storage can hold a derived `nadabrahman` stage alongside the three source pulse stages. I separated `PulseModeKind` from the broader `MenuBarInsightKind` so the title-mode preference still only targets source cadence while the cache can store the remedy output too.
+- Added `buildMenuBarRemedyPlan(...)` in `src/lib/menu-bar-insights.ts`. After `vedic-clock`, `biorhythm`, and `vimshottari` are available, Raycast now builds a `nadabrahman` engine request with:
+  - the profile birth data
+  - current time
+  - `precision` from profile preferences or `Standard`
+  - `options.mode = "pulse-remedy"`
+  - `options.pulse_cadence` containing compact summaries and key result fields from the three source pulse engines
+- Updated `src/lib/queries.ts` to run menu-bar sync in two stages: refresh the source pulse plans first, merge those cached insights, then derive and run the `nadabrahman` remedy plan. The derived remedy refresh cadence now follows the earliest next refresh among the source pulse insights.
+- Added a Nadabrahman presenter in `src/lib/menu-bar-insights.ts` so the cached remedy surfaces a primary raga, time window, and therapeutic summary from the top recommendation. The menu bar now shows that remedy section in `src/menubar.tsx`, and the dashboard pulse board now includes a `NadaBrahman Remedy` section plus direct Nadabrahman engine actions in `src/dashboard.tsx` and `src/lib/pulse-board-presenter.ts`.
+- This client work does not yet generate audio files or media URLs. It now carries the pulse cadence into the remedy run and surfaces the textual NadaBrahman result, which is the client-side base needed for those later engine-side enrichments.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-pulse-remedy && mkdir -p /tmp/noesis-testbuild-20260501-pulse-remedy && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-pulse-remedy`
+  - `node --test /tmp/noesis-testbuild-20260501-pulse-remedy/lib/menu-bar-insights.test.js /tmp/noesis-testbuild-20260501-pulse-remedy/lib/pulse-board-presenter.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
+# 2026-05-01 Full Catalog On Main Dashboard
+
+## Checklist
+
+- [x] Remove the main dashboard's `featured` slicing so all cached engines and workflows are visible there.
+- [x] Preserve a deterministic ordering for the full engine/workflow lists so active items still float to the top.
+- [x] Add regression coverage for the dashboard catalog ordering helper.
+- [x] Verify with TypeScript, focused tests, and a full Raycast build.
+
+## Spec
+
+- The main dashboard should show the complete cached engine and workflow catalogs, not just `5` engines and `4` workflows.
+- Ordering can stay “active first” for engines and “larger orchestration first” for workflows, but it should be applied across the full arrays rather than followed by a slice.
+- Section titles/copy should make it clear these are the full cached catalogs on the dashboard surface.
+
+## Review
+
+- Root cause: the main dashboard was using `getFeaturedEngines(...)` and `getFeaturedWorkflows(...)`, which sorted the cached catalogs and then sliced them down to `5` engines and `4` workflows. The full catalogs were only available in the separate browser commands.
+- Added `src/lib/dashboard-catalog.ts` so dashboard ordering is pure and testable. Engines still sort with activity first using readings plus usage breakdown, and workflows still sort by engine span first, but both helpers now return the entire cached arrays.
+- Updated `src/dashboard.tsx` to render `All Engines` and `All Workflows` from those full-catalog helpers instead of the old featured subsets. The launchpad/browser actions remain unchanged, but the main dashboard now exposes the whole cached catalog directly.
+- Added `src/lib/dashboard-catalog.test.ts` to prevent regressions where a future refactor reintroduces a hidden slice while the UI still implies full catalog coverage.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-dashboard-catalog && mkdir -p /tmp/noesis-testbuild-20260501-dashboard-catalog && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-dashboard-catalog`
+  - `node --test /tmp/noesis-testbuild-20260501-dashboard-catalog/lib/dashboard-catalog.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
+# 2026-05-01 Workflow Engine Result Expansion
+
+## Checklist
+
+- [x] Reproduce why workflow engine result objects are collapsing to `7 field(s)`/`n field(s)` in the Daily Practice report.
+- [x] Separate workflow section heading depth from structured-object recursion depth in the result presenter.
+- [x] Add a regression test using nested workflow engine output fields like `physical`, `emotional`, and `intellectual`.
+- [x] Verify with TypeScript, focused presenter tests, and a full Raycast build.
+
+## Spec
+
+- Workflow result pages should expand the nested engine payloads the same way standalone engine result pages do.
+- The `#### Result` and `#### Witness Layer` workflow section headings should stay readable, but their child objects should not inherit an already-exhausted recursion depth.
+- Nested workflow fields may degrade to bold sublabels once they exceed markdown heading depth, but they should render field content rather than `n field(s)` placeholders for the common engine payload shapes.
+
+## Review
+
+- Root cause: the workflow presenter was passing `depth = 2` into `buildStructuredField(...)`, and that same value was being used both for markdown heading selection and object-recursion limits. Nested engine payloads therefore started at the truncation boundary and immediately degraded to `field(s)` previews.
+- Fixed `src/lib/execution-result-presenter.ts` by introducing a separate structured-section helper that accepts independent markdown heading level and traversal depth. Workflow `Result` and `Witness Layer` sections now keep their existing `####` headings while resetting traversal depth so nested objects like `physical`, `emotional`, and `intellectual` expand.
+- Added a regression in `src/lib/execution-result-presenter.test.ts` that models the Daily Practice biorhythm payload shape and asserts the markdown contains nested field content instead of `Physical: 3 field(s)` style previews.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-workflow-presenter && mkdir -p /tmp/noesis-testbuild-20260501-workflow-presenter && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-workflow-presenter`
+  - `node --test /tmp/noesis-testbuild-20260501-workflow-presenter/lib/execution-result-presenter.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
+# 2026-05-01 Daily Witness Off /reading
+
+## Checklist
+
+- [x] Replace the `Daily Witness` command's `/reading` call with the shared workflow execution path.
+- [x] Resolve the workflow ID from profile defaults when present, with a deterministic fallback for the witness flow.
+- [x] Reuse the dyad-first workflow presenter and keep Daily Witness result actions/metadata readable in Raycast.
+- [x] Remove the now-unused `/reading`-specific client dependency from the command surface.
+- [x] Verify with TypeScript, focused tests, and a full Raycast build.
+
+## Spec
+
+- `Daily Witness` should no longer call the standalone Witness `/reading` endpoint.
+- The command should run the same interpreted workflow contract as the rest of Raycast, which means `executeWorkflow(...)` plus the dyad-first `witness_layer.response` mapping already used for workflow results.
+- The workflow target should prefer the profile's `default_workflow` when configured, otherwise fall back to `daily-practice`.
+- The form can stay Daily Witness-specific, but the result screen should be workflow-backed rather than decoder-state-backed.
+
+## Review
+
+- Replaced the standalone `/reading` client in `src/daily-witness.tsx` with shared workflow execution, so Daily Witness now runs `executeWorkflow(...)` and renders the same dyad-first workflow result contract as the rest of the extension.
+- Added `src/lib/daily-witness.ts` to keep the new workflow resolution, request shaping, and request serialization logic pure and testable. The workflow now prefers `profile.preferences.default_workflow` and falls back to `daily-practice`.
+- Preserved no-key Witness behavior by allowing Daily Witness to run with an empty API key only when the execution route is `witness`; if the operator forces `selemene`, the command now fails with an explicit reconfiguration message instead of silently using `/reading`.
+- Removed the unused `/reading`-specific command dependency by trimming the legacy reading types and `getReading(...)` call from `src/lib/witness-api.ts`, and removed the now-dead witness-reading presenter path from `src/lib/execution-result-presenter.ts`.
+- Updated the Store/README copy so `Daily Witness` is described as a shared witness-workflow surface rather than a dedicated Daily Mirror engine path.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-daily-witness && mkdir -p /tmp/noesis-testbuild-20260501-daily-witness && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-daily-witness`
+  - `printf 'const store = new Map();\nexports.getPreferenceValues = () => ({});\nexports.LocalStorage = {\n  getItem: async (key) => store.get(key),\n  setItem: async (key, value) => { store.set(key, value); },\n  removeItem: async (key) => { store.delete(key); },\n};\n' > /tmp/noesis-testbuild-20260501-daily-witness/node_modules/@raycast/api/index.js`
+  - `node --test /tmp/noesis-testbuild-20260501-daily-witness/lib/daily-witness.test.js /tmp/noesis-testbuild-20260501-daily-witness/lib/api.test.js /tmp/noesis-testbuild-20260501-daily-witness/lib/execution-result-presenter.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
+# 2026-05-01 Raycast Dyad-First Witness Routing
+
+## Checklist
+
+- [x] Audit the current Raycast Witness consumption path for Daily Witness, engine runs, and workflow runs.
+- [x] Make the Witness gateway the default execution route for Raycast engine/workflow runs.
+- [x] Prefer dyad witness output fields like `witness_layer.response` across shared execution mappers and result surfaces.
+- [x] Keep Daily Witness rendering aligned with the same dyad-first text-selection rules where applicable.
+- [x] Add regression coverage for Witness dyad payload mapping and the new default route.
+- [x] Verify with TypeScript, focused tests, and record the rollout below.
+
+## Spec
+
+- Raycast engine and workflow executions should default to the Witness gateway so the extension follows the live dyad-backed path unless an operator explicitly switches back to Selemene direct.
+- Shared execution mapping must treat `witness_layer.response` as the primary final text, with structured dyad fallbacks before raw `witness_prompt`.
+- Workflow synthesis and per-engine outputs should preserve the richer Witness payload instead of assuming the old `witness_question` alias still exists.
+- Daily Witness can keep its existing `/reading` transport for now, but its presentation should use the same best-available witness text selection rules rather than drifting further from the shared contract.
+
+## Review
+
+- Switched the Raycast execution-route default to `witness` in both `package.json` and `src/lib/settings.ts`, while adding an env override so focused tests can still pin direct Selemene behavior explicitly.
+- Added a shared witness-text selector in `src/lib/witness-text.ts` and routed engine/workflow mapping through it so `witness_layer.response`, `synthesis`, `pichet.perspective`, and `aletheios.perspective` all outrank the old raw prompt alias.
+- Preserved `witnessLayer` on `EngineExecutionResult` objects and surfaced that richer dyad structure in engine and workflow result markdown instead of hiding it only inside raw JSON.
+- Kept Daily Witness on `/reading`, but updated its presenter path to surface the best available witness text at the top so the command no longer drifts further from the dyad-first experience.
+- Added regressions for both API mapping and markdown presentation to prove Witness-route engine/workflow responses now prefer dyad text and keep structured witness-layer data.
+- Verification:
+  - `PATH=/opt/homebrew/bin:$PATH npx tsc --noEmit`
+  - `rm -rf /tmp/noesis-testbuild-20260501-dyad && mkdir -p /tmp/noesis-testbuild-20260501-dyad && PATH=/opt/homebrew/bin:$PATH npx tsc --outDir /tmp/noesis-testbuild-20260501-dyad`
+  - `printf 'const store = new Map();\nexports.getPreferenceValues = () => ({});\nexports.LocalStorage = {\n  getItem: async (key) => store.get(key),\n  setItem: async (key, value) => { store.set(key, value); },\n  removeItem: async (key) => { store.delete(key); },\n};\n' > /tmp/noesis-testbuild-20260501-dyad/node_modules/@raycast/api/index.js`
+  - `node --test /tmp/noesis-testbuild-20260501-dyad/lib/api.test.js`
+  - `node --test /tmp/noesis-testbuild-20260501-dyad/lib/execution-result-presenter.test.js`
+  - `PATH=/opt/homebrew/bin:$PATH npm run build`
+
 # Tryambakam Noesis Raycast Plan
 
 ## Checklist

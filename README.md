@@ -43,7 +43,7 @@ Tryambakam Noesis is a native Raycast field console for running Selemene reading
 | `Readings` | Review cached reading history with interpreted result pages and explicit payload copy actions. |
 | `Profile` | Maintain shared birth data, timezone, default precision, and default workflow preferences. |
 | `API Key` | Connect or rotate the Selemene key, warm the cache, and manage local account state safely. |
-| `Daily Witness` | Open the somatic witness reading flow backed by the Daily Mirror engine. |
+| `Daily Witness` | Open the somatic witness flow backed by the shared witness workflow. |
 | `Pulse` | Show the current organ, biorhythm, or Vimshottari pulse in the menu bar and mirrored detail view. |
 
 ## Runtime Model

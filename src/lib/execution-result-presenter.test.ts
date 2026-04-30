@@ -80,6 +80,158 @@ test("buildEngineResultMarkdown turns nested engine payloads into readable secti
   assert.doesNotMatch(markdown, /## Raw Response Preview/);
 });
 
+test("buildEngineResultMarkdown prefers dyad witness response and shows the witness layer", () => {
+  const result: EngineExecutionResult = {
+    engineId: "biorhythm",
+    witnessPrompt:
+      "Your body is ready. Bring that readiness into one concrete act.",
+    witnessLayer: {
+      response:
+        "Your body is ready. Bring that readiness into one concrete act.",
+      synthesis: "Action is available, but it needs conscious direction.",
+      aletheios: {
+        perspective: "Your momentum is real.",
+      },
+      pichet: {
+        perspective: "Choose one honest action instead of three impulses.",
+      },
+    },
+    metadata: {
+      calculation_time_ms: 9,
+    },
+    result: {
+      overall_energy: 88,
+      physical: { percentage: 92, phase: "Rising" },
+      emotional: { percentage: 54, phase: "Stable" },
+      intellectual: { percentage: 61, phase: "Steady" },
+    },
+    raw: {
+      engine_id: "biorhythm",
+    },
+  };
+
+  const markdown = buildEngineResultMarkdown("Biorhythm Result", result);
+
+  assert.match(
+    markdown,
+    /Your body is ready\. Bring that readiness into one concrete act\./,
+  );
+  assert.match(markdown, /## Witness Layer/);
+  assert.match(markdown, /- Response: Your body is ready\./);
+  assert.match(markdown, /### Pichet/);
+});
+
+test("buildEngineResultMarkdown maps nadabrahman remedy responses and request context cleanly", () => {
+  const result: EngineExecutionResult = {
+    engineId: "nadabrahman",
+    witnessPrompt:
+      "In the stillness of night, what is the quietest sound you can hear? What happens when you listen beyond that? The raga Shubhapantuvarali carries a particular emotional quality. If you were to hum a single note right now, what pitch would your body choose? What feeling arises with that tone? If your entire being — body, breath, and awareness — were a musical instrument, what is it playing right now? Listen without changing the melody.",
+    witnessLayer: {
+      response:
+        "In the stillness of night, what is the quietest sound you can hear? What happens when you listen beyond that? The raga Shubhapantuvarali carries a particular emotional quality. If you were to hum a single note right now, what pitch would your body choose? What feeling arises with that tone? If your entire being — body, breath, and awareness — were a musical instrument, what is it playing right now? Listen without changing the melody.\n\nThe pattern and the body agree — this is a convergence point worth your attention.",
+    },
+    consciousnessLevel: 0,
+    metadata: {
+      calculation_time_ms: 0.019249000000000002,
+      backend: "native",
+      precision_achieved: "standard",
+      cached: false,
+      timestamp: "2026-04-30T21:39:59.799324020Z",
+      engine_version: "3.0.0",
+    },
+    result: {
+      recommendations: [
+        {
+          arohanam: ["sa", "ri1", "ga2", "ma2", "pa", "dha1", "ni3", "sa"],
+          avarohanam: ["sa", "ni3", "dha1", "pa", "ma2", "ga2", "ri1", "sa"],
+          mood: "intense",
+          raga_name: "Shubhapantuvarali",
+          raga_number: 45,
+          score: 1,
+          reason:
+            "Deeply contemplative raga with intense inward-turning quality",
+          therapeutic_qualities: [
+            "deep_healing",
+            "karmic_release",
+            "transformation",
+          ],
+        },
+        {
+          arohanam: ["sa", "ri1", "ga1", "ma2", "pa", "dha1", "ni3", "sa"],
+          avarohanam: ["sa", "ni3", "dha1", "pa", "ma2", "ga1", "ri1", "sa"],
+          mood: "intense",
+          raga_name: "Jhalavarali",
+          raga_number: 39,
+          score: 0.95,
+          reason: "Rare and mysterious, suitable for deep night meditation",
+          therapeutic_qualities: ["shadow_work", "transmutation"],
+        },
+      ],
+      time_recommendation: {
+        dosha_dominance: "vata",
+        energy_quality: "inward",
+        prahar_name: "Pradosha (Early Night)",
+        prahar_number: 6,
+        primary_raga: {
+          raga_name: "Shubhapantuvarali",
+          raga_number: 45,
+          reason:
+            "Deeply contemplative raga with intense inward-turning quality",
+        },
+        time_range: "21:00-00:00",
+      },
+    },
+    raw: {
+      engine_id: "nadabrahman",
+    },
+  };
+
+  const markdown = buildEngineResultMarkdown("NadaBrahman Result", result, {
+    requestPayload: {
+      birth_data: {
+        name: "Cumbipuram Nateshan Sheshnarayan Iyer",
+        date: "1991-08-13",
+        time: "13:31",
+        latitude: 12.9716,
+        longitude: 77.5946,
+        timezone: "Asia/Kolkata",
+      },
+      current_time: "2026-04-30T20:48:26.796Z",
+      precision: "Standard",
+    },
+  });
+
+  assert.match(markdown, /## Sonic Remedy/);
+  assert.match(markdown, /\| Primary Raga \| Shubhapantuvarali \|/);
+  assert.match(markdown, /\| Prahar \| Pradosha \(Early Night\) \|/);
+  assert.match(markdown, /\| Window \| 21:00-00:00 \|/);
+  assert.match(markdown, /\| Dosha \| Vata \|/);
+  assert.match(markdown, /\| Energy \| Inward \|/);
+  assert.match(markdown, /\| Mood \| Intense \|/);
+  assert.match(markdown, /## Reading Brief/);
+  assert.match(markdown, /- Primary raga: Shubhapantuvarali/);
+  assert.match(
+    markdown,
+    /- Listening window: Pradosha \(Early Night\) · 21:00-00:00/,
+  );
+  assert.match(markdown, /- Dosha dominance: Vata/);
+  assert.match(markdown, /- Energy quality: Inward/);
+  assert.match(
+    markdown,
+    /- Therapeutic qualities: Deep Healing, Karmic Release, Transformation/,
+  );
+  assert.match(markdown, /## Request Context/);
+  assert.match(markdown, /### Birth Data/);
+  assert.match(markdown, /- Name: Cumbipuram Nateshan Sheshnarayan Iyer/);
+  assert.match(markdown, /- Current Time: 2026-04-30T20:48:26.796Z/);
+  assert.match(markdown, /- Precision: Standard/);
+  assert.match(markdown, /## Result Map/);
+  assert.match(markdown, /\*\*Recommendation 1\*\*/);
+  assert.match(markdown, /### Time Recommendation/);
+  assert.match(markdown, /- Arohanam: sa, ri1, ga2, ma2, pa, dha1, ni3, sa/);
+  assert.match(markdown, /- Avarohanam: sa, ni3, dha1, pa, ma2, ga2, ri1, sa/);
+});
+
 test("buildEngineResultMarkdown renders tarot spreads as readable card sections", () => {
   const result: EngineExecutionResult = {
     engineId: "tarot",
@@ -262,6 +414,120 @@ test("buildWorkflowResultMarkdown organizes synthesis and per-engine outputs", (
   assert.match(markdown, /Observe the fasting current\./);
   assert.match(markdown, /### Numerology/);
   assert.doesNotMatch(markdown, /## Raw Response Preview/);
+});
+
+test("buildWorkflowResultMarkdown expands nested workflow engine result fields instead of preview counts", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    totalTimeMs: 11.2,
+    timestamp: "2026-05-01T20:32:55.623Z",
+    synthesis: {
+      summary: "The full portrait is a mirror, not a map.",
+    },
+    engineOutputs: {
+      biorhythm: {
+        engineId: "biorhythm",
+        witnessPrompt:
+          "Your physical cycle is at 100% while emotional is at 5%.",
+        result: {
+          overall_energy: 68,
+          physical: {
+            percentage: 100,
+            phase: "Peak",
+            critical_days: ["2026-05-05", "2026-05-06"],
+          },
+          emotional: {
+            percentage: 5,
+            phase: "Rising",
+          },
+          intellectual: {
+            percentage: 99,
+            phase: "Peak",
+          },
+        },
+        metadata: {
+          calculation_time_ms: 3.4,
+        },
+        raw: {},
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown(
+    "Daily Practice Result",
+    result,
+  );
+
+  assert.match(markdown, /#### Result/);
+  assert.match(markdown, /\*\*Physical\*\*/);
+  assert.match(markdown, /- Percentage: 100/);
+  assert.match(markdown, /- Critical Days: 2026-05-05, 2026-05-06/);
+  assert.match(markdown, /\*\*Emotional\*\*/);
+  assert.match(markdown, /\*\*Intellectual\*\*/);
+  assert.doesNotMatch(markdown, /Physical: \d+ field\(s\)/);
+  assert.doesNotMatch(markdown, /Emotional: \d+ field\(s\)/);
+  assert.doesNotMatch(markdown, /Intellectual: \d+ field\(s\)/);
+});
+
+test("buildWorkflowResultMarkdown surfaces witness dyad text for workflow and engine outputs", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    totalTimeMs: 19.4,
+    timestamp: "2026-05-01T03:05:00Z",
+    synthesis: {
+      witness_layer: {
+        response:
+          "You do not need a bigger plan today. You need one honest action.",
+        synthesis:
+          "Resolve the inner split by acting on what is already clear.",
+        pichet: {
+          perspective: "Keep it concrete.",
+        },
+      },
+    },
+    engineOutputs: {
+      biorhythm: {
+        engineId: "biorhythm",
+        witnessPrompt:
+          "Your body can carry more truth than your mind is admitting.",
+        witnessLayer: {
+          response:
+            "Your body can carry more truth than your mind is admitting.",
+          synthesis:
+            "Let the physical surplus steady the emotional field.",
+        },
+        result: {
+          overall_energy: 84,
+        },
+        metadata: {
+          calculation_time_ms: 10.4,
+        },
+        raw: {},
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown(
+    "Daily Practice Result",
+    result,
+  );
+
+  assert.match(
+    markdown,
+    /You do not need a bigger plan today\. You need one honest action\./,
+  );
+  assert.match(markdown, /### Biorhythm/);
+  assert.match(
+    markdown,
+    /Your body can carry more truth than your mind is admitting\./,
+  );
+  assert.match(markdown, /#### Witness Layer/);
 });
 
 test("buildReadingResultMarkdown reuses the interpreted presenter for cached readings", () => {

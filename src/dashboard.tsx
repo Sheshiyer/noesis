@@ -34,6 +34,10 @@ import {
   truncate,
 } from "./lib/formatters";
 import {
+  getDashboardEngines,
+  getDashboardWorkflows,
+} from "./lib/dashboard-catalog";
+import {
   getPreferredInsight,
   getPulseModeLabel,
 } from "./lib/menu-bar-insights";
@@ -101,8 +105,8 @@ export default function Dashboard() {
     );
   }
 
-  const featuredEngines = snapshot ? getFeaturedEngines(snapshot) : [];
-  const featuredWorkflows = snapshot ? getFeaturedWorkflows(snapshot) : [];
+  const dashboardEngines = snapshot ? getDashboardEngines(snapshot) : [];
+  const dashboardWorkflows = snapshot ? getDashboardWorkflows(snapshot) : [];
   const recentReadings = snapshot?.readings.slice(0, 6) ?? [];
   const totalReadingCount =
     snapshot?.readingStats.reduce((sum, entry) => sum + entry.count, 0) ?? 0;
@@ -125,33 +129,39 @@ export default function Dashboard() {
     pulseBoardSnapshot?.insights ?? {},
     pulseMode,
   );
+  const pulseRemedy = pulseBoardSnapshot?.insights.nadabrahman;
   const pulseKind = currentPulse?.kind ?? pulseMode;
   const pulseTitle =
     currentPulse?.title ?? getPulsePendingTitle(pulseModeLabel, snapshot);
   const pulseDetailSummary =
-    currentPulse?.summary ?? getPulsePendingSummary(pulseModeLabel, snapshot);
+    pulseRemedy?.summary ??
+    currentPulse?.summary ??
+    getPulsePendingSummary(pulseModeLabel, snapshot);
   const pulseEngine =
     snapshot && currentPulse
       ? snapshot.engines.find((engine) => engine.id === currentPulse.engineId)
       : undefined;
+  const pulseRemedyEngine = snapshot
+    ? snapshot.engines.find((engine) => engine.id === "nadabrahman")
+    : undefined;
 
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle="Tryambakam Noesis"
-      searchBarPlaceholder="Navigate Tryambakam Noesis"
+      searchBarPlaceholder="Search pulse, flows, engines, and readings"
     >
       {snapshot ? (
         <>
-          <List.Section title="Launchpad">
+          <List.Section title="Practice">
             <List.Item
               icon={{
                 source: Icon.PersonCircle,
                 tintColor: snapshot.profile ? Color.Blue : Color.Orange,
               }}
               title={{
-                value: "Profile Defaults",
+                value: "Your Profile",
                 tooltip:
                   snapshot.profile?.fullName ??
                   "Set shared birth data, timezone, and reusable witness defaults.",
@@ -178,9 +188,9 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Profile Defaults",
+                    "# Your Profile",
                     "",
-                    "Maintain the shared witness identity once, then reuse it across engine and workflow execution forms.",
+                    "Keep your birth data and timezone ready so every reading starts from the same witness context.",
                     "",
                     snapshot.profile
                       ? `- Active operator: ${snapshot.profile.fullName}`
@@ -216,7 +226,7 @@ export default function Dashboard() {
             <List.Item
               icon={Icon.Stars}
               title={{
-                value: "Engine Console",
+                value: "Explore Engines",
                 tooltip:
                   "Run individual Selemene engines and inspect phase coverage.",
               }}
@@ -234,9 +244,9 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Engine Console",
+                    "# Explore Engines",
                     "",
-                    "Move through the Selemene engine catalog with phase grouping, execution entry points, and cached reading context.",
+                    "Browse the full engine library, run individual readings, and inspect past outputs without leaving the extension.",
                     "",
                     `- ${formatCount(snapshot.engines.length, "engine")} in the current cache`,
                     `- ${formatCount(totalReadingCount, "reading")} represented across engine stats`,
@@ -248,7 +258,7 @@ export default function Dashboard() {
               actions={
                 <NoesisActionPanel onRefresh={reload} hideDashboardAction>
                   <Action.Push
-                    title="Open Engine Console"
+                    title="Open Engine Library"
                     icon={Icon.ArrowRightCircle}
                     target={
                       <EnginesBrowser
@@ -269,7 +279,7 @@ export default function Dashboard() {
             <List.Item
               icon={Icon.Network}
               title={{
-                value: "Workflow Studio",
+                value: "Guided Flows",
                 tooltip:
                   "Inspect composite orchestration chains and launch multi-engine readings.",
               }}
@@ -291,9 +301,9 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Workflow Studio",
+                    "# Guided Flows",
                     "",
-                    "Inspect Selemene orchestration chains in a dedicated browser with detail previews and direct execution drill-ins.",
+                    "Move through curated multi-engine practices when you want a fuller reading rather than a single engine pass.",
                     "",
                     `- ${formatCount(snapshot.workflows.length, "workflow")} cached locally`,
                     `- Largest workflow spans ${maxWorkflowSpan} engines`,
@@ -303,7 +313,7 @@ export default function Dashboard() {
               actions={
                 <NoesisActionPanel onRefresh={reload} hideDashboardAction>
                   <Action.Push
-                    title="Open Workflow Studio"
+                    title="Open Guided Flows"
                     icon={Icon.ArrowRightCircle}
                     target={
                       <WorkflowsBrowser
@@ -344,7 +354,7 @@ export default function Dashboard() {
                   markdown={[
                     "# Reading Archive",
                     "",
-                    "Traverse cached reading history with witness prompts, JSON excerpts, and structured metadata.",
+                    "Return to previous readings, witness responses, and stored results from earlier sessions.",
                     "",
                     `- ${formatCount(snapshot.readings.length, "recent reading")} in the local history window`,
                     `- Latest sync landed ${formatRelativeTime(snapshot.timestamps.readings)}`,
@@ -374,7 +384,7 @@ export default function Dashboard() {
             />
           </List.Section>
 
-          <List.Section title="Command Center">
+          <List.Section title="Pulse">
             <List.Item
               icon={{
                 source: getPulseIcon(pulseKind),
@@ -386,6 +396,7 @@ export default function Dashboard() {
                   pulseModeLabel,
                   pulseTitle,
                   currentPulse?.subtitle,
+                  pulseRemedy?.title,
                   pulseDetailSummary,
                 ]
                   .filter(Boolean)
@@ -394,7 +405,9 @@ export default function Dashboard() {
               keywords={[
                 pulseModeLabel,
                 currentPulse?.engineId ?? "",
+                pulseRemedy?.engineId ?? "",
                 pulseTitle,
+                pulseRemedy?.title ?? "",
                 pulseDetailSummary,
               ]}
               accessories={[
@@ -429,7 +442,7 @@ export default function Dashboard() {
                 <NoesisActionPanel
                   onRefresh={reload}
                   hideDashboardAction
-                  refreshTitle="Refresh Command Center"
+                  refreshTitle="Refresh Pulse"
                 >
                   {pulseEngine ? (
                     <Action.Push
@@ -450,6 +463,30 @@ export default function Dashboard() {
                       target={
                         <EngineDetailView
                           engine={pulseEngine}
+                          snapshot={snapshot}
+                        />
+                      }
+                    />
+                  ) : null}
+                  {pulseRemedyEngine ? (
+                    <Action.Push
+                      title="Run NadaBrahman Remedy"
+                      icon={Icon.Music}
+                      target={
+                        <EngineExecutionForm
+                          engine={pulseRemedyEngine}
+                          snapshot={snapshot}
+                        />
+                      }
+                    />
+                  ) : null}
+                  {pulseRemedyEngine ? (
+                    <Action.Push
+                      title="View NadaBrahman Engine"
+                      icon={Icon.ArrowRightCircle}
+                      target={
+                        <EngineDetailView
+                          engine={pulseRemedyEngine}
                           snapshot={snapshot}
                         />
                       }
@@ -477,6 +514,120 @@ export default function Dashboard() {
             />
             <List.Item
               icon={{
+                source: Icon.Music,
+                tintColor: Color.Blue,
+              }}
+              title={{
+                value:
+                  pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
+                tooltip: [
+                  pulseRemedy?.title,
+                  pulseRemedy?.subtitle,
+                  pulseRemedy?.summary,
+                ]
+                  .filter(Boolean)
+                  .join("\n"),
+              }}
+              keywords={[
+                "nadabrahman",
+                "remedy",
+                pulseRemedy?.title ?? "",
+                pulseRemedy?.summary ?? "",
+              ]}
+              accessories={[
+                {
+                  tag: {
+                    value: "REMEDY",
+                    color: Color.Blue,
+                  },
+                },
+                {
+                  text: pulseRemedy
+                    ? formatTimeUntil(pulseRemedy.refreshAfter)
+                    : snapshot.profile?.birthDate
+                      ? "Sync"
+                      : "Profile",
+                  tooltip: pulseRemedy
+                    ? `Refreshes in ${formatTimeUntil(pulseRemedy.refreshAfter)}`
+                    : snapshot.profile?.birthDate
+                      ? "Refresh the pulse cache to derive the latest remedy."
+                      : "Add birth data in Profile to unlock the derived remedy.",
+                },
+              ]}
+              detail={
+                <List.Item.Detail
+                  markdown={[
+                    "# NadaBrahman Remedy",
+                    "",
+                    pulseRemedy
+                      ? "Derived from the current pulse cadence to give you the raga or sonic direction most aligned with this moment."
+                      : getRemedyPendingSummary(snapshot),
+                    "",
+                    pulseRemedy?.title
+                      ? `- Current raga: ${pulseRemedy.title}`
+                      : null,
+                    pulseRemedy?.subtitle
+                      ? `- Listening window: ${pulseRemedy.subtitle}`
+                      : null,
+                    pulseRemedy?.summary
+                      ? `- Remedy note: ${pulseRemedy.summary}`
+                      : null,
+                    currentPulse?.title
+                      ? `- Derived from: ${pulseModeLabel} · ${currentPulse.title}`
+                      : null,
+                    pulseRemedy?.fetchedAt
+                      ? `- Cached: ${formatRelativeTime(pulseRemedy.fetchedAt)} (${formatAbsoluteTime(pulseRemedy.fetchedAt)})`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join("\n")}
+                />
+              }
+              actions={
+                <NoesisActionPanel
+                  onRefresh={reload}
+                  hideDashboardAction
+                  refreshTitle="Refresh Pulse"
+                >
+                  {pulseRemedyEngine ? (
+                    <Action.Push
+                      title="Run NadaBrahman Remedy"
+                      icon={Icon.Play}
+                      target={
+                        <EngineExecutionForm
+                          engine={pulseRemedyEngine}
+                          snapshot={snapshot}
+                        />
+                      }
+                    />
+                  ) : null}
+                  {pulseRemedyEngine ? (
+                    <Action.Push
+                      title="View NadaBrahman Engine"
+                      icon={Icon.ArrowRightCircle}
+                      target={
+                        <EngineDetailView
+                          engine={pulseRemedyEngine}
+                          snapshot={snapshot}
+                        />
+                      }
+                    />
+                  ) : null}
+                  {!pulseRemedyEngine ? (
+                    <Action.Push
+                      title="Edit Profile"
+                      icon={Icon.Pencil}
+                      target={<ProfileForm snapshot={snapshot} />}
+                    />
+                  ) : null}
+                </NoesisActionPanel>
+              }
+            />
+          </List.Section>
+
+          <List.Section title="Developer Tools">
+            <List.Item
+              icon={{
                 source: snapshot.hasCredentials ? Icon.Globe : Icon.Key,
                 tintColor: snapshot.syncError
                   ? Color.Orange
@@ -488,8 +639,8 @@ export default function Dashboard() {
               }}
               title={
                 snapshot.hasCredentials
-                  ? "Selemene Engine Ready"
-                  : "Cached Mode Only"
+                  ? "Connection & Routing"
+                  : "Offline Connection"
               }
               keywords={[
                 snapshot.baseUrl,
@@ -519,7 +670,7 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Selemene Engine",
+                    "# Connection & Routing",
                     "",
                     snapshot.hasCredentials
                       ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from the Selemene Engine."
@@ -564,7 +715,7 @@ export default function Dashboard() {
                 <NoesisActionPanel
                   onRefresh={reload}
                   hideDashboardAction
-                  refreshTitle="Refresh Command Center"
+                  refreshTitle="Refresh Developer Tools"
                 >
                   <Action
                     title={
@@ -579,93 +730,8 @@ export default function Dashboard() {
               }
             />
             <List.Item
-              icon={{
-                source: Icon.PersonCircle,
-                tintColor: snapshot.profile ? Color.Blue : Color.Orange,
-              }}
-              title={snapshot.profile?.fullName ?? "Profile Defaults Pending"}
-              keywords={[
-                snapshot.profile?.email ?? "",
-                snapshot.profile?.fullName ?? "",
-                snapshot.profile?.timezone ?? "",
-              ]}
-              accessories={[
-                {
-                  text: snapshot.profile?.timezone ?? "No TZ",
-                  tooltip: snapshot.profile?.timezone
-                    ? `Timezone ${snapshot.profile.timezone}`
-                    : "Timezone not set",
-                },
-                {
-                  text: snapshot.profile?.tier ?? "Profile",
-                  tooltip: snapshot.profile
-                    ? `${snapshot.profile.tier} tier`
-                    : "No live profile cached yet",
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    `# ${snapshot.profile?.fullName ?? "Profile Defaults"}`,
-                    "",
-                    snapshot.profile
-                      ? "Birth data and timezone are ready to prefill engine and workflow execution forms."
-                      : "No profile is cached yet. Saving profile defaults will make the execution forms faster and unlock personal pulse modes.",
-                    "",
-                    snapshot.profile?.email
-                      ? `- Email: ${snapshot.profile.email}`
-                      : "- Email: Not cached",
-                    snapshot.profile?.tier
-                      ? `- Tier: ${snapshot.profile.tier}`
-                      : "- Tier: Unknown",
-                    snapshot.profile
-                      ? `- Consciousness level: ${snapshot.profile.consciousnessLevel}`
-                      : "- Consciousness level: Unknown",
-                    snapshot.profile
-                      ? `- Experience points: ${snapshot.profile.experiencePoints}`
-                      : "- Experience points: Unknown",
-                    snapshot.profile?.birthDate
-                      ? `- Birth date: ${snapshot.profile.birthDate}`
-                      : "- Birth date: Not set",
-                    snapshot.profile?.birthTime
-                      ? `- Birth time: ${snapshot.profile.birthTime}`
-                      : "- Birth time: Not set",
-                    snapshot.profile?.birthLocation?.name
-                      ? `- Birth location: ${snapshot.profile.birthLocation.name}`
-                      : snapshot.profile?.birthLocation?.latitude !==
-                            undefined &&
-                          snapshot.profile?.birthLocation?.longitude !==
-                            undefined
-                        ? `- Birth location: ${snapshot.profile.birthLocation.latitude}, ${snapshot.profile.birthLocation.longitude}`
-                        : "- Birth location: Not set",
-                    snapshot.profile?.timezone
-                      ? `- Timezone: ${snapshot.profile.timezone}`
-                      : "- Timezone: Not set",
-                  ].join("\n")}
-                />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={reload}
-                  hideDashboardAction
-                  refreshTitle="Refresh Command Center"
-                >
-                  <Action.Push
-                    title="Edit Profile"
-                    icon={Icon.Pencil}
-                    target={<ProfileForm snapshot={snapshot} />}
-                  />
-                  <Action
-                    title="Open Profile Command"
-                    icon={Icon.AppWindowList}
-                    onAction={() => openCommand("profile")}
-                  />
-                </NoesisActionPanel>
-              }
-            />
-            <List.Item
               icon={Icon.BarChart}
-              title="Usage Window"
+              title="Usage & Limits"
               accessories={[
                 {
                   text: snapshot.usage
@@ -687,7 +753,7 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Usage Window",
+                    "# Usage & Limits",
                     "",
                     snapshot.usage
                       ? "Current request volume and engine distribution from the cached usage window."
@@ -716,7 +782,7 @@ export default function Dashboard() {
                 <NoesisActionPanel
                   onRefresh={reload}
                   hideDashboardAction
-                  refreshTitle="Refresh Command Center"
+                  refreshTitle="Refresh Developer Tools"
                 >
                   <Action.Push
                     title="Browse Readings"
@@ -746,7 +812,7 @@ export default function Dashboard() {
                 source: Icon.Circle,
                 tintColor: getCacheColor(snapshot.cacheState),
               }}
-              title={getCacheStatusTitle(snapshot.cacheState)}
+              title="Cache & Sync"
               keywords={[
                 "sqlite",
                 snapshot.cacheState,
@@ -770,7 +836,7 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Snapshot Cache",
+                    "# Cache & Sync",
                     "",
                     snapshot.syncError ??
                       "The local sqlite cache is active and serving command data first.",
@@ -790,15 +856,15 @@ export default function Dashboard() {
                 <NoesisActionPanel
                   onRefresh={reload}
                   hideDashboardAction
-                  refreshTitle="Refresh Command Center"
+                  refreshTitle="Refresh Developer Tools"
                 />
               }
             />
           </List.Section>
 
-          {featuredEngines.length ? (
-            <List.Section title="Active Engines">
-              {featuredEngines.map((engine) => (
+          {dashboardEngines.length ? (
+            <List.Section title="Engine Library">
+              {dashboardEngines.map((engine) => (
                 <List.Item
                   key={engine.id}
                   icon={{
@@ -839,7 +905,7 @@ export default function Dashboard() {
                         "",
                         `${formatCount(getReadingCount(snapshot, engine.id), "cached reading")} in the current dashboard snapshot.`,
                         "",
-                        "Enter opens the engine execution form, with engine detail still available as a secondary action.",
+                        "This main dashboard section now shows the full cached engine catalog. Enter opens the execution form, with engine detail still available as a secondary action.",
                       ].join("\n")}
                     />
                   }
@@ -882,9 +948,9 @@ export default function Dashboard() {
             </List.Section>
           ) : null}
 
-          {featuredWorkflows.length ? (
-            <List.Section title="Featured Workflows">
-              {featuredWorkflows.map((workflow) => (
+          {dashboardWorkflows.length ? (
+            <List.Section title="Flow Library">
+              {dashboardWorkflows.map((workflow) => (
                 <List.Item
                   key={workflow.id}
                   icon={Icon.Network}
@@ -905,6 +971,8 @@ export default function Dashboard() {
                         `# ${workflow.name}`,
                         "",
                         workflow.description || "Composite Selemene workflow.",
+                        "",
+                        "This main dashboard section now shows the full cached workflow catalog.",
                         "",
                         workflow.engineIds.length
                           ? `Engines: ${workflow.engineIds.join(", ")}`
@@ -1022,34 +1090,6 @@ export default function Dashboard() {
   );
 }
 
-function getFeaturedEngines(snapshot: DashboardSnapshot) {
-  const engineScores = new Map<string, number>();
-
-  for (const stat of snapshot.readingStats) {
-    engineScores.set(stat.engineId, stat.count);
-  }
-
-  for (const entry of snapshot.usage?.engineBreakdown ?? []) {
-    engineScores.set(
-      entry.engineId,
-      (engineScores.get(entry.engineId) ?? 0) + entry.requestCount,
-    );
-  }
-
-  return [...snapshot.engines]
-    .sort(
-      (left, right) =>
-        (engineScores.get(right.id) ?? 0) - (engineScores.get(left.id) ?? 0),
-    )
-    .slice(0, 5);
-}
-
-function getFeaturedWorkflows(snapshot: DashboardSnapshot) {
-  return [...snapshot.workflows]
-    .sort((left, right) => right.engineCount - left.engineCount)
-    .slice(0, 4);
-}
-
 function getReadingCount(snapshot: DashboardSnapshot, engineId: string) {
   return (
     snapshot.readingStats.find((entry) => entry.engineId === engineId)?.count ??
@@ -1089,10 +1129,40 @@ function getPulsePendingSummary(
   return "Refresh the pulse cache to surface the current reading.";
 }
 
+function getRemedyPendingTitle(
+  snapshot: DashboardSnapshot | null | undefined,
+): string {
+  if (!snapshot?.hasCredentials) {
+    return "Reconnect to Derive Remedy";
+  }
+
+  if (!snapshot.profile?.birthDate) {
+    return "Remedy Needs Profile";
+  }
+
+  return "NadaBrahman Remedy Pending";
+}
+
+function getRemedyPendingSummary(
+  snapshot: DashboardSnapshot | null | undefined,
+): string {
+  if (!snapshot?.hasCredentials) {
+    return "Reconnect the API key so the extension can derive a NadaBrahman remedy from the live pulse cadence.";
+  }
+
+  if (!snapshot.profile?.birthDate) {
+    return "Add birth data and timezone in Profile to unlock the derived NadaBrahman remedy.";
+  }
+
+  return "Refresh the pulse cache to derive the current NadaBrahman remedy from the source pulse cadence.";
+}
+
 function getPulseIcon(kind: MenuBarInsightKind): Icon {
   switch (kind) {
     case "biorhythm":
       return Icon.Heartbeat;
+    case "nadabrahman":
+      return Icon.Music;
     case "vimshottari":
       return Icon.Stars;
     case "vedicClock":
@@ -1105,26 +1175,12 @@ function getPulseColor(kind: MenuBarInsightKind): Color {
   switch (kind) {
     case "biorhythm":
       return Color.Green;
+    case "nadabrahman":
+      return Color.Blue;
     case "vimshottari":
       return Color.Orange;
     case "vedicClock":
     default:
       return Color.Yellow;
-  }
-}
-
-function getCacheStatusTitle(
-  cacheState: DashboardSnapshot["cacheState"],
-): string {
-  switch (cacheState) {
-    case "fresh":
-      return "Snapshot Fresh";
-    case "stale":
-      return "Snapshot Aging";
-    case "cached":
-      return "Offline Cache Ready";
-    case "empty":
-    default:
-      return "Cache Empty";
   }
 }

@@ -15,7 +15,7 @@ type ExtensionPreferences = {
   /** Daily Witness API URL - Trusted Witness gateway URL used only when the execution route preference is set to Witness. */
   "witnessUrl": string,
   /** Execution Route - Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway. */
-  "executionRoute": "selemene" | "witness",
+  "executionRoute": "witness" | "selemene",
   /** Reading History Cache - Maximum number of reading rows to keep in the local SQLite cache. */
   "readingHistoryLimit": "25" | "50" | "100",
   /** Store Raw Payloads - Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads. */

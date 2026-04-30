@@ -3,7 +3,7 @@ import {
   ReadingSummary,
   WorkflowExecutionResult,
 } from "./types";
-import { WitnessEngineReading, WitnessReadingResponse } from "./witness-api";
+import { getWitnessLayer, selectWitnessText } from "./witness-text";
 
 const MAX_ARRAY_ITEMS = 4;
 const MAX_OBJECT_DEPTH = 2;
@@ -17,13 +17,22 @@ export function buildEngineResultMarkdown(
     `# ${title}`,
     "",
     ...(options.contextLines?.length ? [...options.contextLines, ""] : []),
-    result.witnessPrompt ?? "_No witness prompt returned._",
+    result.witnessPrompt ?? "_No witness response returned._",
     "",
   ];
 
   const heroSection = buildEngineHeroSection(result, 2);
   if (heroSection.length > 0) {
     lines.push(...heroSection, "");
+  }
+
+  if (result.witnessLayer && Object.keys(result.witnessLayer).length > 0) {
+    lines.push(
+      "## Witness Layer",
+      "",
+      ...buildStructuredBlock(result.witnessLayer),
+      "",
+    );
   }
 
   lines.push("## Reading Brief", "", ...buildEngineHighlightLines(result));
@@ -62,7 +71,7 @@ export function buildReadingResultMarkdown(
   const normalized = toEngineExecutionResultFromReading(reading);
 
   return buildEngineResultMarkdown(
-    truncate(reading.witnessPrompt, expanded ? 120 : 60) ||
+    truncate(normalized.witnessPrompt, expanded ? 120 : 60) ||
       humanizeKey(reading.engineId),
     normalized,
     {
@@ -78,6 +87,7 @@ export function buildWorkflowResultMarkdown(
   requestPayload?: Record<string, unknown>,
 ): string {
   const engineIds = Object.keys(result.engineOutputs);
+  const witnessText = selectWitnessText(result.synthesis);
   const lines = [
     `# ${title}`,
     "",
@@ -85,14 +95,24 @@ export function buildWorkflowResultMarkdown(
       ? `Completed ${formatAbsoluteTime(result.timestamp)}`
       : "Workflow complete.",
     "",
+  ];
+
+  if (witnessText) {
+    lines.push(witnessText, "");
+  }
+
+  lines.push(
     "## Run Brief",
     "",
     `- Engine outputs returned: ${engineIds.length}`,
     `- Total time: ${formatCalculationTime(result.totalTimeMs)}`,
-  ];
+  );
 
   const synthesisSummary = pickSummaryString(result.synthesis);
-  if (synthesisSummary) {
+  if (
+    synthesisSummary &&
+    (!witnessText || synthesisSummary !== truncate(witnessText, 200))
+  ) {
     lines.push(`- Synthesis: ${synthesisSummary}`);
   }
 
@@ -143,49 +163,14 @@ export function buildWorkflowResultMarkdown(
         lines.push(...outputBrief, "");
       }
 
+      if (output.witnessLayer && Object.keys(output.witnessLayer).length > 0) {
+        lines.push(
+          ...buildStructuredSection("Witness Layer", output.witnessLayer, 4, 0),
+          "",
+        );
+      }
+
       lines.push(...buildEngineOutputResultField(output, "Result", 2), "");
-    }
-  }
-
-  return compactMarkdown(lines).join("\n");
-}
-
-export function buildWitnessReadingMarkdown(
-  response: WitnessReadingResponse,
-): string {
-  const reading = response.reading;
-  const decoder = reading.decoder_state;
-  const primary = reading.primary_reading;
-  const lines: Array<string | null> = [
-    `# Daily Witness`,
-    "",
-    `${reading.date} · ${humanizeKey(reading.primary_engine)} · ${describeWitnessNarrative(decoder.consecutive_days, decoder.total_visits)}`,
-    "",
-    "## Decoder",
-    "",
-    `- Layer: ${reading.max_layer_unlocked}/5`,
-    `- Streak: ${decoder.consecutive_days} day${decoder.consecutive_days === 1 ? "" : "s"}`,
-    `- Visits: ${decoder.total_visits}`,
-    `- Engines called: ${reading.engines_called.join(", ")}`,
-    `- Latency: ${reading.total_latency_ms}ms`,
-    "",
-    ...buildWitnessEngineSection("Primary Reading", primary),
-  ];
-
-  const secondaryEntries = Object.entries(reading.all_readings).filter(
-    ([engineId]) => engineId !== reading.primary_engine,
-  );
-
-  if (secondaryEntries.length > 0) {
-    lines.push("", "## Other Engines", "");
-
-    for (const [engineId, engineReading] of secondaryEntries) {
-      lines.push(
-        `### ${humanizeKey(engineId)}`,
-        "",
-        ...buildWitnessDataPointLines(engineReading),
-        "",
-      );
     }
   }
 
@@ -249,6 +234,7 @@ function buildEngineHighlightLines(result: EngineExecutionResult): string[] {
     typeof readNumber(payload, "overall_energy") === "number"
       ? `- Overall energy: ${Math.round(readNumber(payload, "overall_energy") ?? 0)}%`
       : null,
+    ...buildNadabrahmanHighlightLines(result.engineId, payload),
     ...buildTarotHighlightLines(result.engineId, payload),
     pickSummaryLine(payload),
   ].filter(Boolean) as string[];
@@ -328,6 +314,39 @@ function buildEngineHeroSection(
         ],
         readString(asRecord(payload.period_enrichment), "combined_description"),
       );
+    case "nadabrahman": {
+      const timeRecommendation = asRecord(payload.time_recommendation);
+      const primaryRaga = asRecord(timeRecommendation.primary_raga);
+      const topRecommendation = getTopRecommendation(payload.recommendations);
+      return buildTableSection(
+        `${headingPrefix} Sonic Remedy`,
+        [
+          [
+            "Primary Raga",
+            readString(primaryRaga, "raga_name") ??
+              readString(topRecommendation, "raga_name"),
+          ],
+          ["Prahar", readString(timeRecommendation, "prahar_name")],
+          ["Window", readString(timeRecommendation, "time_range")],
+          [
+            "Dosha",
+            humanizePhrase(
+              readString(timeRecommendation, "dosha_dominance") ?? "",
+            ),
+          ],
+          [
+            "Energy",
+            humanizePhrase(
+              readString(timeRecommendation, "energy_quality") ?? "",
+            ),
+          ],
+          ["Mood", humanizePhrase(readString(topRecommendation, "mood") ?? "")],
+        ],
+        readString(primaryRaga, "reason") ??
+          readString(topRecommendation, "reason") ??
+          readString(result.witnessLayer ?? {}, "response"),
+      );
+    }
     case "tarot": {
       const positions = getTarotPositions(payload);
       return buildTableSection(
@@ -353,11 +372,66 @@ function buildEngineHeroSection(
   }
 }
 
+function buildNadabrahmanHighlightLines(
+  engineId: string,
+  payload: Record<string, unknown>,
+): string[] {
+  if (engineId !== "nadabrahman") {
+    return [];
+  }
+
+  const lines: string[] = [];
+  const timeRecommendation = asRecord(payload.time_recommendation);
+  const primaryRaga = asRecord(timeRecommendation.primary_raga);
+  const topRecommendation = getTopRecommendation(payload.recommendations);
+  const qualities = readStringArray(topRecommendation.therapeutic_qualities).map(
+    (quality) => humanizePhrase(quality),
+  );
+
+  const primaryName =
+    readString(primaryRaga, "raga_name") ??
+    readString(topRecommendation, "raga_name");
+  if (primaryName) {
+    lines.push(`- Primary raga: ${primaryName}`);
+  }
+
+  const prahar = readString(timeRecommendation, "prahar_name");
+  const window = readString(timeRecommendation, "time_range");
+  if (prahar || window) {
+    lines.push(
+      `- Listening window: ${[prahar, window].filter(Boolean).join(" · ")}`,
+    );
+  }
+
+  const doshaDominance = readString(timeRecommendation, "dosha_dominance");
+  if (doshaDominance) {
+    lines.push(`- Dosha dominance: ${humanizePhrase(doshaDominance)}`);
+  }
+
+  const energyQuality = readString(timeRecommendation, "energy_quality");
+  if (energyQuality) {
+    lines.push(`- Energy quality: ${humanizePhrase(energyQuality)}`);
+  }
+
+  const mood = readString(topRecommendation, "mood");
+  if (mood) {
+    lines.push(`- Mood: ${humanizePhrase(mood)}`);
+  }
+
+  if (qualities.length > 0) {
+    lines.push(`- Therapeutic qualities: ${qualities.join(", ")}`);
+  }
+
+  return lines;
+}
+
 function buildEngineResultBlock(
   result: EngineExecutionResult,
   headingLevel: number,
 ): string[] {
   switch (result.engineId) {
+    case "nadabrahman":
+      return buildNadabrahmanResultBlock(result.result, headingLevel);
     case "tarot":
       return buildTarotResultBlock(result.result, headingLevel);
     default:
@@ -370,8 +444,16 @@ function buildEngineOutputResultField(
   label: string,
   depth: number,
 ): string[] {
+  if (result.engineId === "nadabrahman") {
+    return [
+      formatHeading(label, depth + 2),
+      "",
+      ...buildNadabrahmanResultBlock(result.result, depth + 3),
+    ];
+  }
+
   if (result.engineId !== "tarot") {
-    return buildStructuredField(label, result.result, depth);
+    return buildStructuredSection(label, result.result, depth + 2, 0);
   }
 
   return [
@@ -462,8 +544,8 @@ function toEngineExecutionResultFromReading(
   return {
     engineId: reading.engineId,
     result: resultRecord,
-    witnessPrompt:
-      reading.witnessPrompt ?? readString(payload, "witness_prompt"),
+    witnessPrompt: reading.witnessPrompt ?? selectWitnessText(payload),
+    witnessLayer: getWitnessLayer(payload),
     consciousnessLevel:
       reading.consciousnessLevel ?? readNumber(payload, "consciousness_level"),
     metadata: {
@@ -505,6 +587,7 @@ function extractReadingResultRecord(
     "fetched_at",
     "metadata",
     "timestamp",
+    "witness_layer",
     "result",
     "result_data",
     "birth_data",
@@ -554,59 +637,9 @@ function formatReadingContextLine(reading: ReadingSummary): string {
   return [reading.engineId, reading.workflowId].filter(Boolean).join(" · ");
 }
 
-function buildWitnessEngineSection(
-  title: string,
-  reading: WitnessEngineReading,
-): string[] {
-  return [
-    `## ${title}`,
-    "",
-    `### ${humanizeKey(reading.engine_id)}`,
-    "",
-    `- Headline: ${reading.headline}`,
-    `- Role: ${reading.engine_role}`,
-    `- Layer: ${reading.layer}`,
-    ...buildWitnessDataPointLines(reading),
-    ...(reading.witness_question
-      ? ["", `- Witness question: ${reading.witness_question}`]
-      : []),
-  ];
-}
-
-function buildWitnessDataPointLines(reading: WitnessEngineReading): string[] {
-  const emphasized = reading.data_points.filter((point) => point.emphasis);
-  const secondary = reading.data_points.filter((point) => !point.emphasis);
-  const lines = [
-    ...emphasized.map((point) => `- ${point.label}: ${point.value}`),
-    ...secondary.slice(0, 4).map((point) => `- ${point.label}: ${point.value}`),
-  ];
-
-  return lines.length > 0 ? lines : ["- No structured data points returned."];
-}
-
-function describeWitnessNarrative(
-  consecutiveDays: number,
-  totalVisits: number,
-): string {
-  if (consecutiveDays >= 30) {
-    return "Graduate";
-  }
-  if (consecutiveDays >= 14) {
-    return "Finder";
-  }
-  if (consecutiveDays >= 7) {
-    return "Devoted";
-  }
-  if (totalVisits > 1) {
-    return "Returning";
-  }
-
-  return "Newcomer";
-}
-
 function pickSummaryLine(payload: Record<string, unknown>): string | null {
   const candidate =
-    readString(payload, "synthesis") ??
+    selectWitnessText(payload) ??
     readString(payload, "summary") ??
     readString(asRecord(payload.period_enrichment), "combined_description") ??
     readString(asRecord(payload.recommendation), "time_window");
@@ -616,11 +649,11 @@ function pickSummaryLine(payload: Record<string, unknown>): string | null {
 
 function buildStructuredBlock(value: unknown): string[] {
   if (isRecord(value)) {
-    return buildStructuredObject(value, 0);
+    return buildStructuredObject(value, 0, 3);
   }
 
   if (Array.isArray(value)) {
-    return buildStructuredArray("Items", value, 0);
+    return buildStructuredArray("Items", value, 0, 3);
   }
 
   return [`- ${formatInlineValue(value)}`];
@@ -629,6 +662,7 @@ function buildStructuredBlock(value: unknown): string[] {
 function buildStructuredObject(
   record: Record<string, unknown>,
   depth: number,
+  nestedHeadingLevel: number,
 ): string[] {
   const primitiveEntries: Array<[string, unknown]> = [];
   const nestedEntries: Array<[string, unknown]> = [];
@@ -657,7 +691,115 @@ function buildStructuredObject(
       continue;
     }
 
-    lines.push("", ...buildStructuredField(humanizeKey(key), value, depth + 1));
+    lines.push(
+      "",
+      ...buildStructuredSection(
+        humanizeKey(key),
+        value,
+        nestedHeadingLevel,
+        depth + 1,
+      ),
+    );
+  }
+
+  return compactMarkdown(lines);
+}
+
+function buildNadabrahmanResultBlock(
+  payload: Record<string, unknown>,
+  headingLevel: number,
+): string[] {
+  const lines: string[] = [];
+  const timeRecommendation = asRecord(payload.time_recommendation);
+  const primaryRaga = asRecord(timeRecommendation.primary_raga);
+  const recommendations = getRecommendationRecords(payload.recommendations);
+
+  if (Object.keys(timeRecommendation).length > 0) {
+    lines.push(
+      formatHeading("Time Recommendation", headingLevel),
+      "",
+      ...compactMarkdown([
+        readString(timeRecommendation, "dosha_dominance")
+          ? `- Dosha Dominance: ${humanizePhrase(readString(timeRecommendation, "dosha_dominance") ?? "")}`
+          : null,
+        readString(timeRecommendation, "energy_quality")
+          ? `- Energy Quality: ${humanizePhrase(readString(timeRecommendation, "energy_quality") ?? "")}`
+          : null,
+        readString(timeRecommendation, "prahar_name")
+          ? `- Prahar Name: ${readString(timeRecommendation, "prahar_name")}`
+          : null,
+        typeof readNumber(timeRecommendation, "prahar_number") === "number"
+          ? `- Prahar Number: ${readNumber(timeRecommendation, "prahar_number")}`
+          : null,
+        readString(timeRecommendation, "time_range")
+          ? `- Time Range: ${readString(timeRecommendation, "time_range")}`
+          : null,
+      ]),
+    );
+
+    if (Object.keys(primaryRaga).length > 0) {
+      lines.push(
+        "",
+        formatHeading("Primary Raga", headingLevel + 1),
+        "",
+        ...compactMarkdown([
+          readString(primaryRaga, "raga_name")
+            ? `- Raga Name: ${readString(primaryRaga, "raga_name")}`
+            : null,
+          typeof readNumber(primaryRaga, "raga_number") === "number"
+            ? `- Raga Number: ${readNumber(primaryRaga, "raga_number")}`
+            : null,
+          readString(primaryRaga, "reason")
+            ? `- Reason: ${readString(primaryRaga, "reason")}`
+            : null,
+        ]),
+      );
+    }
+  }
+
+  if (recommendations.length > 0) {
+    lines.push("", formatHeading("Recommendations", headingLevel), "");
+
+    recommendations.forEach((recommendation, index) => {
+      lines.push(
+        `**Recommendation ${index + 1}**`,
+        ...compactMarkdown([
+          readString(recommendation, "raga_name")
+            ? `- Raga Name: ${readString(recommendation, "raga_name")}`
+            : null,
+          typeof readNumber(recommendation, "raga_number") === "number"
+            ? `- Raga Number: ${readNumber(recommendation, "raga_number")}`
+            : null,
+          readString(recommendation, "mood")
+            ? `- Mood: ${humanizePhrase(readString(recommendation, "mood") ?? "")}`
+            : null,
+          typeof readNumber(recommendation, "score") === "number"
+            ? `- Score: ${readNumber(recommendation, "score")}`
+            : null,
+          readString(recommendation, "reason")
+            ? `- Reason: ${readString(recommendation, "reason")}`
+            : null,
+          formatJoinedStringLine(
+            "Therapeutic Qualities",
+            readStringArray(recommendation.therapeutic_qualities).map(
+              (quality) => humanizePhrase(quality),
+            ),
+          ),
+          formatJoinedStringLine(
+            "Arohanam",
+            readStringArray(recommendation.arohanam),
+          ),
+          formatJoinedStringLine(
+            "Avarohanam",
+            readStringArray(recommendation.avarohanam),
+          ),
+        ]),
+      );
+
+      if (index < recommendations.length - 1) {
+        lines.push("");
+      }
+    });
   }
 
   return compactMarkdown(lines);
@@ -668,14 +810,31 @@ function buildStructuredField(
   value: unknown,
   depth: number,
 ): string[] {
-  const heading = `${"#".repeat(Math.min(4, depth + 2))} ${label}`;
+  return buildStructuredSection(label, value, depth + 2, depth);
+}
+
+function buildStructuredSection(
+  label: string,
+  value: unknown,
+  headingLevel: number,
+  structureDepth: number,
+): string[] {
+  const heading = formatHeading(label, headingLevel);
 
   if (Array.isArray(value)) {
-    return [heading, "", ...buildStructuredArray(label, value, depth)];
+    return [
+      heading,
+      "",
+      ...buildStructuredArray(label, value, structureDepth, headingLevel + 1),
+    ];
   }
 
   if (isRecord(value)) {
-    return [heading, "", ...buildStructuredObject(value, depth)];
+    return [
+      heading,
+      "",
+      ...buildStructuredObject(value, structureDepth, headingLevel + 1),
+    ];
   }
 
   return [heading, "", `- ${formatInlineValue(value)}`];
@@ -685,6 +844,7 @@ function buildStructuredArray(
   label: string,
   items: unknown[],
   depth: number,
+  nestedHeadingLevel: number,
 ): string[] {
   if (items.length === 0) {
     return ["- No items returned."];
@@ -709,9 +869,16 @@ function buildStructuredArray(
     lines.push(`**${itemLabel} ${index + 1}**`);
 
     if (isRecord(item)) {
-      lines.push(...buildStructuredObject(item, depth + 1));
+      lines.push(...buildStructuredObject(item, depth + 1, nestedHeadingLevel));
     } else if (Array.isArray(item)) {
-      lines.push(...buildStructuredArray(itemLabel, item, depth + 1));
+      lines.push(
+        ...buildStructuredArray(
+          itemLabel,
+          item,
+          depth + 1,
+          nestedHeadingLevel,
+        ),
+      );
     } else {
       lines.push(`- ${formatInlineValue(item)}`);
     }
@@ -775,7 +942,11 @@ function buildTarotResultBlock(
       "",
       formatHeading("Additional Fields", headingLevel),
       "",
-      ...buildStructuredObject(extraFields, Math.max(0, headingLevel - 2)),
+      ...buildStructuredObject(
+        extraFields,
+        Math.max(0, headingLevel - 2),
+        headingLevel + 1,
+      ),
     );
   }
 
@@ -976,6 +1147,11 @@ function stripPresentationMetadata(
 function pickSummaryString(
   record: Record<string, unknown>,
 ): string | undefined {
+  const witnessText = selectWitnessText(record);
+  if (witnessText) {
+    return truncate(witnessText, 200);
+  }
+
   for (const key of ["summary", "overview", "message", "guidance"]) {
     const value = readString(record, key);
     if (value) {
@@ -1099,6 +1275,35 @@ function readStringArray(value: unknown): string[] {
     (entry): entry is string =>
       typeof entry === "string" && entry.trim().length > 0,
   );
+}
+
+function getTopRecommendation(value: unknown): Record<string, unknown> {
+  const recommendations = getRecommendationRecords(value);
+  if (recommendations.length === 0) {
+    return {};
+  }
+
+  return recommendations.sort(
+    (left, right) =>
+      (readNumber(right, "score") ?? 0) - (readNumber(left, "score") ?? 0),
+  )[0]!;
+}
+
+function getRecommendationRecords(value: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return [];
+  }
+
+  return value
+    .map((entry) => asRecord(entry))
+    .filter((entry) => Object.keys(entry).length > 0);
+}
+
+function formatJoinedStringLine(
+  label: string,
+  values: string[],
+): string | null {
+  return values.length > 0 ? `- ${label}: ${values.join(", ")}` : null;
 }
 
 function compactMarkdown(lines: Array<string | null | undefined>): string[] {

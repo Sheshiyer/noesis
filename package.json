@@ -57,15 +57,15 @@
       "description": "Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway.",
       "type": "dropdown",
       "required": false,
-      "default": "selemene",
+      "default": "witness",
       "data": [
-        {
-          "title": "Selemene Direct",
-          "value": "selemene"
-        },
         {
           "title": "Witness Gateway",
           "value": "witness"
+        },
+        {
+          "title": "Selemene Direct",
+          "value": "selemene"
         }
       ]
     },
@@ -190,7 +190,7 @@
     {
       "name": "daily-witness",
       "title": "Daily Witness",
-      "description": "Daily consciousness reading with somatic witness questions from the Daily Mirror engine",
+      "description": "Daily consciousness reading through the shared witness workflow with dyad-backed synthesis",
       "keywords": [
         "witness",
         "daily",

@@ -1,75 +1,11 @@
 /**
- * Witness API client — talks to the Daily Witness service at 48.tryambakam.space.
- * Separate from Selemene API: no auth required for free tier readings.
+ * Witness gateway helpers for the shared Raycast execution path.
  */
 
 import { getPreferenceValues, LocalStorage } from "@raycast/api";
 import { JsonRequestError, requestJson } from "./http";
 import { SelemenePreferences } from "./types";
 import { trimTrailingSlash } from "./urls";
-
-// ─── Types ──────────────────────────────────────────────────────────────
-
-export interface WitnessReadingRequest {
-  birth_date: string; // YYYY-MM-DD (required)
-  birth_time?: string; // HH:MM
-  name?: string;
-  latitude?: number;
-  longitude?: number;
-  timezone?: string;
-}
-
-export interface WitnessDataPoint {
-  label: string;
-  value: string;
-  category: string;
-  emphasis: boolean;
-}
-
-export interface WitnessEngineReading {
-  layer: number;
-  engine_id: string;
-  engine_role: string;
-  raw_data: Record<string, unknown>;
-  headline: string;
-  data_points: WitnessDataPoint[];
-  timestamp: string;
-  witness_question?: string;
-}
-
-export interface WitnessDecoderState {
-  user_hash: string;
-  total_visits: number;
-  consecutive_days: number;
-  last_visit: string;
-  first_visit: string;
-  max_layer_reached: number;
-  finder_gate_shown: boolean;
-  graduation_shown: boolean;
-  engines_most_viewed: Record<string, number>;
-}
-
-export interface WitnessReading {
-  id: string;
-  date: string;
-  birth_date: string;
-  primary_engine: string;
-  primary_reading: WitnessEngineReading;
-  all_readings: Record<string, WitnessEngineReading>;
-  max_layer_unlocked: number;
-  decoder_state: WitnessDecoderState;
-  engines_called: string[];
-  total_latency_ms: number;
-  cache_stats: Record<string, unknown>;
-  engine_health: Record<string, unknown>;
-  standalone_version: string;
-}
-
-export interface WitnessReadingResponse {
-  reading: WitnessReading;
-  next_reading_available: string;
-  full_platform_url: string;
-}
 
 export interface WitnessProductInfo {
   name: string;
@@ -157,15 +93,6 @@ async function witnessRequest<T>(
 
 export async function getProductInfo(): Promise<WitnessProductInfo> {
   return witnessRequest<WitnessProductInfo>("/");
-}
-
-export async function getReading(
-  request: WitnessReadingRequest,
-): Promise<WitnessReadingResponse> {
-  return witnessRequest<WitnessReadingResponse>("/reading", {
-    method: "POST",
-    body: JSON.stringify(request),
-  });
 }
 
 export async function checkHealth(): Promise<boolean> {

@@ -94,6 +94,16 @@ test("buildPulseBoardMarkdown mirrors the cached menu bar pulse into full dashbo
         fetchedAt: "2026-04-22T12:15:00Z",
         refreshAfter: "2026-04-22T14:15:00Z",
       },
+      nadabrahman: {
+        kind: "nadabrahman",
+        engineId: "nadabrahman",
+        title: "Natabhairavi",
+        subtitle: "Sayahna (Evening) · 18:00-21:00",
+        summary: "Solemn · Grief Processing, Acceptance, Depth",
+        payload: {},
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T13:30:00Z",
+      },
     },
   };
 
@@ -112,6 +122,9 @@ test("buildPulseBoardMarkdown mirrors the cached menu bar pulse into full dashbo
   assert.match(markdown, /- Dominant: Physical Rising 81%/);
   assert.match(markdown, /## Vimshottari/);
   assert.match(markdown, /- Dasha: Maha Sun · Antar Moon · Praty Mars/);
+  assert.match(markdown, /## NadaBrahman Remedy/);
+  assert.match(markdown, /- Raga: Natabhairavi/);
+  assert.match(markdown, /- Remedy: Solemn · Grief Processing, Acceptance, Depth/);
   assert.match(markdown, /## Board Status/);
   assert.match(markdown, /- Cache state: FRESH/);
   assert.match(markdown, /- Combined board: /);
@@ -146,6 +159,11 @@ test("buildPulseBoardMarkdown explains when personal pulse sections need profile
   assert.match(
     markdown,
     /- Add birth data in Profile to unlock vimshottari pulse\./,
+  );
+  assert.match(markdown, /## NadaBrahman Remedy/);
+  assert.match(
+    markdown,
+    /- Add birth data in Profile to derive the NadaBrahman remedy from your pulse cadence\./,
   );
 });
 

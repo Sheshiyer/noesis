@@ -164,6 +164,89 @@ export default function MenuBar() {
         </>
       ) : null}
 
+      {insights.nadabrahman ? (
+        <>
+          <MenuBarExtra.Item
+            title={formatMenuBarLine("Remedy", insights.nadabrahman.title)}
+            icon={Icon.Music}
+          />
+          {insights.nadabrahman.subtitle ? (
+            <MenuBarExtra.Item
+              title={formatMenuBarLine(
+                "Window",
+                insights.nadabrahman.subtitle,
+                68,
+              )}
+            />
+          ) : null}
+          <MenuBarExtra.Item
+            title={formatMenuBarLine(
+              "Nada",
+              insights.nadabrahman.summary,
+              72,
+            )}
+          />
+          <MenuBarExtra.Item
+            title={formatMenuBarLine(
+              "Cached",
+              formatRelativeTime(insights.nadabrahman.fetchedAt),
+              32,
+            )}
+          />
+          <MenuBarExtra.Separator />
+        </>
+      ) : null}
+
+      {pulseSubtitle ? (
+        <MenuBarExtra.Item
+          title={formatMenuBarLine("Board", pulseSubtitle, 72)}
+          icon={Icon.AlignLeft}
+        />
+      ) : null}
+      {dashboard?.timestamps.lastSyncAt ? (
+        <MenuBarExtra.Item
+          title={formatMenuBarLine(
+            "Last Sync",
+            formatRelativeTime(dashboard.timestamps.lastSyncAt),
+            36,
+          )}
+        />
+      ) : null}
+
+      <MenuBarExtra.Separator />
+      <MenuBarExtra.Item
+        title="Open Dashboard"
+        icon={Icon.AppWindow}
+        onAction={() => openCommand("dashboard")}
+      />
+      <MenuBarExtra.Item
+        title="Open Readings"
+        icon={Icon.Book}
+        onAction={() => openCommand("readings")}
+      />
+      <MenuBarExtra.Item
+        title="Refresh Pulse Now"
+        icon={Icon.ArrowClockwise}
+        onAction={() => void load(true)}
+      />
+      <MenuBarExtra.Item
+        title="Edit Profile"
+        icon={Icon.Pencil}
+        onAction={() => openCommand("profile")}
+      />
+      <MenuBarExtra.Item
+        title="Open Engines"
+        icon={Icon.Gauge}
+        onAction={() => openCommand("engines")}
+      />
+      <MenuBarExtra.Item
+        title="Open Workflows"
+        icon={Icon.Network}
+        onAction={() => openCommand("workflows")}
+      />
+
+      <MenuBarExtra.Separator />
+      <MenuBarExtra.Item title="Developer Tools" icon={Icon.Hammer} />
       {dashboard ? (
         <MenuBarExtra.Item
           title={formatMenuBarLine(
@@ -175,7 +258,7 @@ export default function MenuBar() {
         />
       ) : null}
       <MenuBarExtra.Item
-        title={formatMenuBarLine("Mode", getPulseModeLabel(pulseMode), 36)}
+        title={formatMenuBarLine("Title Mode", getPulseModeLabel(pulseMode), 42)}
         icon={Icon.Text}
       />
       <MenuBarExtra.Item
@@ -205,52 +288,10 @@ export default function MenuBar() {
           icon={Icon.ExclamationMark}
         />
       ) : null}
-      {pulseSubtitle ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine("Board", pulseSubtitle, 72)}
-          icon={Icon.AlignLeft}
-        />
-      ) : null}
-      {dashboard?.timestamps.lastSyncAt ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine(
-            "Last Sync",
-            formatRelativeTime(dashboard.timestamps.lastSyncAt),
-            36,
-          )}
-        />
-      ) : null}
-
-      <MenuBarExtra.Separator />
-      <MenuBarExtra.Item
-        title="Open Dashboard"
-        icon={Icon.AppWindow}
-        onAction={() => openCommand("dashboard")}
-      />
-      <MenuBarExtra.Item
-        title="Open Engines"
-        icon={Icon.Gauge}
-        onAction={() => openCommand("engines")}
-      />
-      <MenuBarExtra.Item
-        title="Open Workflows"
-        icon={Icon.Network}
-        onAction={() => openCommand("workflows")}
-      />
-      <MenuBarExtra.Item
-        title="Edit Profile"
-        icon={Icon.Pencil}
-        onAction={() => openCommand("profile")}
-      />
       <MenuBarExtra.Item
         title="Edit Access Key"
         icon={Icon.Key}
         onAction={() => openCommand("api-key")}
-      />
-      <MenuBarExtra.Item
-        title="Refresh Pulse Now"
-        icon={Icon.ArrowClockwise}
-        onAction={() => void load(true)}
       />
       <MenuBarExtra.Item
         title="Open Extension Preferences"

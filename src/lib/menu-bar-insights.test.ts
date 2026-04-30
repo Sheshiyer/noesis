@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildMenuBarInsight,
   buildMenuBarInsightPlans,
+  buildMenuBarRemedyPlan,
   buildMenuBarTitle,
   buildPulseSubtitle,
 } from "./menu-bar-insights";
@@ -68,6 +69,78 @@ test("buildMenuBarInsightPlans schedules current pulse plus personal insights", 
   );
   assert.equal(plans[1]?.input.birthData?.date, "1991-08-13");
   assert.equal(plans[2]?.input.birthData?.timezone, "Asia/Kolkata");
+});
+
+test("buildMenuBarRemedyPlan derives a nadabrahman run from the cached pulse cadence", () => {
+  const dashboard = createDashboardSnapshot();
+  const plan = buildMenuBarRemedyPlan(
+    dashboard,
+    {
+      vedicClock: {
+        kind: "vedicClock",
+        engineId: "vedic-clock",
+        title: "Kidney · Kapha",
+        subtitle: "5:00 PM - 7:00 PM · Water",
+        summary: "Restoration and stillness",
+        payload: {
+          result: {
+            current_organ: {
+              organ: "Kidney",
+              time_window: "5:00 PM - 7:00 PM",
+            },
+          },
+        },
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T13:30:00.000Z",
+      },
+      biorhythm: {
+        kind: "biorhythm",
+        engineId: "biorhythm",
+        title: "Energy 72%",
+        subtitle: "Physical Rising 81%",
+        summary: "Physical 81% · Emotional 68% · Intellectual 67%",
+        payload: {
+          result: {
+            overall_energy: 72,
+            physical: { percentage: 81, phase: "Rising" },
+          },
+        },
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T14:15:00.000Z",
+      },
+      vimshottari: {
+        kind: "vimshottari",
+        engineId: "vimshottari",
+        title: "Sun > Moon > Mars",
+        subtitle: "Next antar in 3d",
+        summary: "Maha Sun · Antar Moon · Praty Mars",
+        payload: {
+          result: {
+            current_period: {
+              mahadasha: { planet: "Sun" },
+            },
+          },
+        },
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T14:15:00.000Z",
+      },
+    },
+    new Date("2026-04-22T12:20:00Z"),
+  );
+
+  assert.equal(plan?.engineId, "nadabrahman");
+  assert.equal(plan?.kind, "nadabrahman");
+  assert.equal(plan?.input.precision, "Standard");
+  assert.equal(plan?.input.birthData?.date, "1991-08-13");
+  assert.equal(plan?.input.options?.mode, "pulse-remedy");
+  const pulseCadence = plan?.input.options?.pulse_cadence as
+    | { source_engines?: string[] }
+    | undefined;
+  assert.equal(
+    pulseCadence?.source_engines?.length,
+    3,
+  );
+  assert.equal(plan?.refreshAfterOverride, "2026-04-22T13:30:00.000Z");
 });
 
 test("buildMenuBarInsight derives a vedic clock title and next boundary refresh", () => {
@@ -176,8 +249,62 @@ test("buildMenuBarTitle truncates long insight titles for menu bar display", () 
   assert.ok(title.startsWith("Pancreas"));
 });
 
+test("buildMenuBarInsight derives a nadabrahman remedy summary from the top recommendation", () => {
+  const result: EngineExecutionResult = {
+    engineId: "nadabrahman",
+    result: {
+      recommendations: [
+        {
+          raga_name: "Natabhairavi",
+          mood: "solemn",
+          score: 1,
+          therapeutic_qualities: [
+            "grief_processing",
+            "acceptance",
+            "depth",
+          ],
+        },
+      ],
+      time_recommendation: {
+        prahar_name: "Sayahna (Evening)",
+        time_range: "18:00-21:00",
+        primary_raga: {
+          raga_name: "Natabhairavi",
+        },
+      },
+    },
+    metadata: {},
+    raw: {
+      engine_id: "nadabrahman",
+    },
+  };
+
+  const insight = buildMenuBarInsight(
+    "nadabrahman",
+    result,
+    "2026-04-30T20:52:36.211Z",
+    false,
+    "2026-04-30T21:30:00.000Z",
+  );
+
+  assert.equal(insight.title, "Natabhairavi");
+  assert.equal(insight.subtitle, "Sayahna (Evening) · 18:00-21:00");
+  assert.match(insight.summary, /Solemn/);
+  assert.match(insight.summary, /Grief Processing/);
+  assert.equal(insight.refreshAfter, "2026-04-30T21:30:00.000Z");
+});
+
 test("buildPulseSubtitle keeps the combined board summary glanceable", () => {
   const subtitle = buildPulseSubtitle({
+    nadabrahman: {
+      kind: "nadabrahman",
+      engineId: "nadabrahman",
+      title: "Natabhairavi",
+      summary: "Solemn · Grief Processing, Acceptance, Depth",
+      payload: {},
+      fetchedAt: "2026-04-22T12:15:00Z",
+      refreshAfter: "2026-04-22T13:30:00.000Z",
+    },
     vedicClock: {
       kind: "vedicClock",
       engineId: "vedic-clock",

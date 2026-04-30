@@ -4,14 +4,21 @@ import {
   EngineExecutionResult,
   MenuBarInsightKind,
   MenuBarInsightSnapshot,
+  PrecisionLevel,
+  PulseModeKind,
   UserProfileSnapshot,
 } from "./types";
 
 export const PERSONAL_INSIGHT_REFRESH_MS = 2 * 60 * 60 * 1000;
-const MENU_BAR_TITLE_FALLBACK_ORDER: MenuBarInsightKind[] = [
+const MENU_BAR_TITLE_FALLBACK_ORDER: PulseModeKind[] = [
   "vedicClock",
   "vimshottari",
   "biorhythm",
+];
+const SOURCE_PULSE_KINDS: PulseModeKind[] = [
+  "vedicClock",
+  "biorhythm",
+  "vimshottari",
 ];
 const MENU_BAR_TITLE_MAX_LENGTH = 28;
 const MENU_BAR_SUBTITLE_MAX_LENGTH = 72;
@@ -20,12 +27,14 @@ export interface MenuBarInsightPlan {
   kind: MenuBarInsightKind;
   engineId: string;
   input: EngineExecutionInput;
+  refreshAfterOverride?: string;
 }
 
 const MENU_BAR_ENGINE_IDS: Record<MenuBarInsightKind, string> = {
   vedicClock: "vedic-clock",
   biorhythm: "biorhythm",
   vimshottari: "vimshottari",
+  nadabrahman: "nadabrahman",
 };
 
 export function mapMenuBarInsights(
@@ -90,11 +99,52 @@ export function buildMenuBarInsightPlans(
   return plans;
 }
 
+export function buildMenuBarRemedyPlan(
+  dashboard: DashboardSnapshot,
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  now: Date = new Date(),
+  force = false,
+  sourceUpdated = false,
+): MenuBarInsightPlan | undefined {
+  if (!dashboard.profile?.birthDate) {
+    return undefined;
+  }
+
+  const cadence = buildPulseCadenceContext(insights, now.toISOString());
+  if (!cadence) {
+    return undefined;
+  }
+
+  if (
+    !force &&
+    !sourceUpdated &&
+    !shouldRefreshInsight(insights.nadabrahman, now)
+  ) {
+    return undefined;
+  }
+
+  return {
+    kind: "nadabrahman",
+    engineId: MENU_BAR_ENGINE_IDS.nadabrahman,
+    input: {
+      birthData: toBirthData(dashboard.profile),
+      currentTime: now.toISOString(),
+      precision: normalizePrecisionPreference(dashboard.profile) ?? "Standard",
+      options: {
+        mode: "pulse-remedy",
+        pulse_cadence: cadence,
+      },
+    },
+    refreshAfterOverride: getCadenceRefreshAfter(insights, now.toISOString()),
+  };
+}
+
 export function buildMenuBarInsight(
   kind: MenuBarInsightKind,
   result: EngineExecutionResult,
   fetchedAt: string,
   includeRawPayloads = false,
+  refreshAfterOverride?: string,
 ): MenuBarInsightSnapshot {
   switch (kind) {
     case "vedicClock":
@@ -103,6 +153,13 @@ export function buildMenuBarInsight(
       return buildBiorhythmInsight(result, fetchedAt, includeRawPayloads);
     case "vimshottari":
       return buildVimshottariInsight(result, fetchedAt, includeRawPayloads);
+    case "nadabrahman":
+      return buildNadabrahmanInsight(
+        result,
+        fetchedAt,
+        includeRawPayloads,
+        refreshAfterOverride,
+      );
     default:
       return {
         kind,
@@ -119,7 +176,7 @@ export function buildMenuBarInsight(
 export function buildMenuBarTitle(
   dashboard: DashboardSnapshot,
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
-  preferredKind: MenuBarInsightKind,
+  preferredKind: PulseModeKind,
   syncError?: string,
 ): string {
   const preferredInsight = getPreferredInsight(insights, preferredKind);
@@ -146,6 +203,7 @@ export function buildPulseSubtitle(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
 ): string {
   const parts = [
+    insights.nadabrahman?.summary,
     insights.vedicClock?.summary,
     insights.biorhythm?.summary,
     insights.vimshottari?.summary,
@@ -157,6 +215,8 @@ export function getPulseModeLabel(kind: MenuBarInsightKind): string {
   switch (kind) {
     case "biorhythm":
       return "Biorhythm";
+    case "nadabrahman":
+      return "NadaBrahman";
     case "vimshottari":
       return "Vimshottari";
     case "vedicClock":
@@ -192,6 +252,26 @@ function toBirthData(
       : {}),
     ...(profile.timezone ? { timezone: profile.timezone } : {}),
   };
+}
+
+function normalizePrecisionPreference(
+  profile: UserProfileSnapshot | undefined,
+): PrecisionLevel | undefined {
+  const raw = profile?.preferences.precision;
+  if (typeof raw !== "string") {
+    return undefined;
+  }
+
+  switch (raw.trim().toLowerCase()) {
+    case "standard":
+      return "Standard";
+    case "high":
+      return "High";
+    case "extreme":
+      return "Extreme";
+    default:
+      return undefined;
+  }
 }
 
 function buildVedicClockInsight(
@@ -318,6 +398,57 @@ function buildVimshottariInsight(
   };
 }
 
+function buildNadabrahmanInsight(
+  result: EngineExecutionResult,
+  fetchedAt: string,
+  includeRawPayloads: boolean,
+  refreshAfterOverride?: string,
+): MenuBarInsightSnapshot {
+  const payload = asRecord(result.result);
+  const timeRecommendation = asRecord(payload.time_recommendation);
+  const primaryRaga = asRecord(timeRecommendation.primary_raga);
+  const topRecommendation = getTopRecommendation(payload.recommendations);
+  const title =
+    readString(primaryRaga, "raga_name") ??
+    readString(topRecommendation, "raga_name") ??
+    "NadaBrahman";
+  const subtitle =
+    [
+      readString(timeRecommendation, "prahar_name"),
+      readString(timeRecommendation, "time_range"),
+    ]
+      .filter(Boolean)
+      .join(" · ") || undefined;
+  const mood = readString(topRecommendation, "mood");
+  const qualities = readStringArray(
+    topRecommendation.therapeutic_qualities,
+  ).map((quality) => humanizeKey(quality));
+  const summary =
+    [
+      mood ? humanizeKey(mood) : null,
+      qualities.length > 0 ? qualities.slice(0, 3).join(", ") : null,
+      !mood && qualities.length === 0
+        ? readString(topRecommendation, "reason") ??
+          readString(primaryRaga, "reason") ??
+          "Nada remedy cached"
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Nada remedy cached";
+
+  return {
+    kind: "nadabrahman",
+    engineId: result.engineId,
+    title,
+    subtitle,
+    summary,
+    payload: buildInsightPayload(result, includeRawPayloads),
+    fetchedAt,
+    refreshAfter:
+      refreshAfterOverride ?? addMilliseconds(fetchedAt, PERSONAL_INSIGHT_REFRESH_MS),
+  };
+}
+
 function buildInsightPayload(
   result: EngineExecutionResult,
   includeRawPayloads: boolean,
@@ -384,7 +515,7 @@ function compactDashaTitle(title: string): string {
 
 export function getPreferredInsight(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
-  preferredKind: MenuBarInsightKind,
+  preferredKind: PulseModeKind,
 ): MenuBarInsightSnapshot | undefined {
   const order = [
     preferredKind,
@@ -404,6 +535,109 @@ export function getPreferredInsight(
 function formatInsightTitle(kind: MenuBarInsightKind, title: string): string {
   const formatted = kind === "vimshottari" ? compactDashaTitle(title) : title;
   return shortenText(formatted, MENU_BAR_TITLE_MAX_LENGTH);
+}
+
+function buildPulseCadenceContext(
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  generatedAt: string,
+): Record<string, unknown> | undefined {
+  const vedicClock = insights.vedicClock;
+  const biorhythm = insights.biorhythm;
+  const vimshottari = insights.vimshottari;
+
+  if (!vedicClock || !biorhythm || !vimshottari) {
+    return undefined;
+  }
+
+  return {
+    generated_at: generatedAt,
+    source_engines: SOURCE_PULSE_KINDS.map((kind) => MENU_BAR_ENGINE_IDS[kind]),
+    vedic_clock: {
+      title: vedicClock.title,
+      subtitle: vedicClock.subtitle,
+      summary: vedicClock.summary,
+      fetched_at: vedicClock.fetchedAt,
+      refresh_after: vedicClock.refreshAfter,
+      result: pickVedicClockCadenceResult(vedicClock.payload),
+    },
+    biorhythm: {
+      title: biorhythm.title,
+      subtitle: biorhythm.subtitle,
+      summary: biorhythm.summary,
+      fetched_at: biorhythm.fetchedAt,
+      refresh_after: biorhythm.refreshAfter,
+      result: pickBiorhythmCadenceResult(biorhythm.payload),
+    },
+    vimshottari: {
+      title: vimshottari.title,
+      subtitle: vimshottari.subtitle,
+      summary: vimshottari.summary,
+      fetched_at: vimshottari.fetchedAt,
+      refresh_after: vimshottari.refreshAfter,
+      result: pickVimshottariCadenceResult(vimshottari.payload),
+    },
+  };
+}
+
+function getCadenceRefreshAfter(
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  fallbackIso: string,
+): string {
+  const refreshTimes = SOURCE_PULSE_KINDS.map((kind) => insights[kind]?.refreshAfter)
+    .map((value) => (value ? Date.parse(value) : Number.NaN))
+    .filter((value) => Number.isFinite(value)) as number[];
+
+  if (refreshTimes.length === 0) {
+    return addMilliseconds(fallbackIso, PERSONAL_INSIGHT_REFRESH_MS);
+  }
+
+  return new Date(Math.min(...refreshTimes)).toISOString();
+}
+
+function pickVedicClockCadenceResult(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = extractInsightResult(payload);
+  return compactRecord({
+    current_organ: asRecord(result.current_organ),
+    current_dosha: asRecord(result.current_dosha),
+    recommendation: asRecord(result.recommendation),
+    synthesis: readString(result, "synthesis"),
+    calculated_for: readString(result, "calculated_for"),
+    timezone: asRecord(result.timezone),
+  });
+}
+
+function pickBiorhythmCadenceResult(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = extractInsightResult(payload);
+  return compactRecord({
+    overall_energy: readNumber(result, "overall_energy"),
+    physical: asRecord(result.physical),
+    emotional: asRecord(result.emotional),
+    intellectual: asRecord(result.intellectual),
+    intuitive: asRecord(result.intuitive),
+  });
+}
+
+function pickVimshottariCadenceResult(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const result = extractInsightResult(payload);
+  return compactRecord({
+    current_period: asRecord(result.current_period),
+    upcoming_transitions: Array.isArray(result.upcoming_transitions)
+      ? result.upcoming_transitions.slice(0, 2)
+      : undefined,
+    period_enrichment: asRecord(result.period_enrichment),
+  });
+}
+
+function extractInsightResult(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  return asRecord(payload.result);
 }
 
 function shortenText(value: string, maxLength: number): string {
@@ -442,6 +676,24 @@ function summarizeCycle(
     percentage: readNumber(cycle, "percentage") ?? undefined,
     phase: readString(cycle, "phase") ?? undefined,
   };
+}
+
+function getTopRecommendation(value: unknown): Record<string, unknown> {
+  if (!Array.isArray(value) || value.length === 0) {
+    return {};
+  }
+
+  const recommendations = value
+    .map((entry) => asRecord(entry))
+    .filter((entry) => Object.keys(entry).length > 0);
+  if (recommendations.length === 0) {
+    return {};
+  }
+
+  return recommendations.sort(
+    (left, right) =>
+      (readNumber(right, "score") ?? 0) - (readNumber(left, "score") ?? 0),
+  )[0]!;
 }
 
 function readUpcomingTransition(
@@ -494,6 +746,36 @@ function readStringArray(value: unknown): string[] {
     (entry): entry is string =>
       typeof entry === "string" && entry.trim().length > 0,
   );
+}
+
+function compactRecord(
+  record: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(record).filter(([, value]) => {
+      if (value === undefined || value === null) {
+        return false;
+      }
+
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+
+      if (typeof value === "object") {
+        return Object.keys(asRecord(value)).length > 0;
+      }
+
+      return true;
+    }),
+  );
+}
+
+function humanizeKey(value: string): string {
+  return value
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

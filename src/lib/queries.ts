@@ -5,6 +5,7 @@ import { createNoesisCacheRepository } from "./cache";
 import {
   buildMenuBarInsight,
   buildMenuBarInsightPlans,
+  buildMenuBarRemedyPlan,
   mapMenuBarInsights,
 } from "./menu-bar-insights";
 import {
@@ -141,6 +142,7 @@ export async function syncMenuBarSnapshot(
   const dashboard = await syncDashboardSnapshot({ force: options.force });
   const cachedInsights = mapMenuBarInsights(repository.readMenuBarInsights());
   const config = await getStoredConfig();
+  const now = new Date();
 
   if (!config) {
     return {
@@ -153,31 +155,25 @@ export async function syncMenuBarSnapshot(
   const plans = buildMenuBarInsightPlans(
     dashboard,
     cachedInsights,
-    new Date(),
+    now,
     options.force,
   );
-
-  if (plans.length === 0) {
-    return {
-      dashboard,
-      insights: cachedInsights,
-      syncIssues: [],
-    };
-  }
-
-  const settled = await Promise.allSettled(
+  const includeRawPayloads = shouldCacheRawPayloadsPreference();
+  const routeTarget = getExecutionRoutePreference();
+  const sourceSettled = await Promise.allSettled(
     plans.map(async (plan) => {
       const result = await calculateEngine(config, plan.engineId, plan.input);
       return buildMenuBarInsight(
         plan.kind,
         result,
-        new Date().toISOString(),
-        shouldCacheRawPayloadsPreference(),
+        now.toISOString(),
+        includeRawPayloads,
+        plan.refreshAfterOverride,
       );
     }),
   );
 
-  const successful = settled
+  const successful = sourceSettled
     .filter(
       (
         entry,
@@ -186,8 +182,7 @@ export async function syncMenuBarSnapshot(
       > => entry.status === "fulfilled",
     )
     .map((entry) => entry.value);
-  const routeTarget = getExecutionRoutePreference();
-  const syncIssues: SyncIssue[] = settled.flatMap((entry, index) =>
+  const syncIssues: SyncIssue[] = sourceSettled.flatMap((entry, index) =>
     entry.status === "rejected"
       ? [
           {
@@ -201,17 +196,69 @@ export async function syncMenuBarSnapshot(
         ]
       : [],
   );
+
+  const mergedInsights = {
+    ...cachedInsights,
+    ...mapMenuBarInsights(successful),
+  };
+  const remedyPlan = buildMenuBarRemedyPlan(
+    dashboard,
+    mergedInsights,
+    now,
+    options.force,
+    successful.length > 0,
+  );
+
+  let remedyInsight;
+  if (remedyPlan) {
+    try {
+      const remedyResult = await calculateEngine(
+        config,
+        remedyPlan.engineId,
+        remedyPlan.input,
+      );
+      remedyInsight = buildMenuBarInsight(
+        remedyPlan.kind,
+        remedyResult,
+        now.toISOString(),
+        includeRawPayloads,
+        remedyPlan.refreshAfterOverride,
+      );
+    } catch (error) {
+      syncIssues.push({
+        resource: remedyPlan.kind,
+        target: routeTarget,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to refresh menu bar insight",
+      });
+    }
+  }
+
+  if (plans.length === 0 && !remedyPlan) {
+    return {
+      dashboard,
+      insights: cachedInsights,
+      syncIssues,
+    };
+  }
+
   const failures = syncIssues.map((issue) => issue.message);
 
-  if (successful.length > 0) {
-    repository.saveMenuBarInsights(successful);
+  const nextInsights = remedyInsight ? [...successful, remedyInsight] : successful;
+
+  if (nextInsights.length > 0) {
+    repository.saveMenuBarInsights(nextInsights);
   }
 
   return {
     dashboard,
     insights: {
-      ...cachedInsights,
-      ...mapMenuBarInsights(successful),
+      ...mergedInsights,
+      ...(remedyInsight
+        ? mapMenuBarInsights([remedyInsight])
+        : {}),
     },
     syncIssues,
     syncError: failures[0],

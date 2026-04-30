@@ -21,3 +21,9 @@
 - After adding or renaming Raycast commands, `npm run build` is not enough for local validation; run `npm run dev`/`ray develop` so Raycast refreshes its enabled-command registry.
 - For navigation between commands inside the same Raycast extension, use `launchCommand` with `LaunchType.UserInitiated`; `raycast://` URLs can be blocked by Raycast with "Not allowed to run command."
 - When the user asks for a deep review across security, design, API handling, and storage, switch from incremental implementation to a structured audit plan with explicit deliverables and repository-specific evidence.
+- When moving Raycast onto the Witness dyad contract, do not leave `Daily Witness` on the legacy `/reading` endpoint; every user-facing reading surface should be checked for the same transport split.
+- In the workflow result presenter, do not reuse markdown heading depth as object-recursion depth; nested engine payloads need their own traversal budget or they collapse into `field(s)` previews instead of readable sections.
+- If the dashboard is presented as the main catalog surface, do not hide most engines or workflows behind “featured” slices; the top-level dashboard should show the full cached catalog unless the UI explicitly says it is curated.
+- When the user provides a concrete engine payload example, map that engine to a purpose-built result view instead of assuming the generic structured renderer is sufficient.
+- When the user corrects a sample payload with the actual raw engine output, update the regression to the exact contract instead of leaving an approximate fixture in place.
+- When the user asks for a friendlier product UI, stop treating cache/route/usage diagnostics as primary content and move them behind an explicit developer-tools surface.

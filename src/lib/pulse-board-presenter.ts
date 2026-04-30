@@ -8,11 +8,12 @@ import {
   DashboardSnapshot,
   MenuBarInsightKind,
   MenuBarSnapshot,
+  PulseModeKind,
 } from "./types";
 
 export function buildPulseBoardMarkdown(
   snapshot: MenuBarSnapshot | null,
-  preferredKind: MenuBarInsightKind,
+  preferredKind: PulseModeKind,
 ): string {
   if (!snapshot) {
     return [
@@ -126,6 +127,28 @@ export function buildPulseBoardMarkdown(
       getInsightUnavailableMessage("vimshottari", dashboard),
     ),
     "",
+    ...buildInsightSection(
+      "NadaBrahman Remedy",
+      [
+        ["Raga", insights.nadabrahman?.title],
+        ["Window", insights.nadabrahman?.subtitle],
+        ["Remedy", insights.nadabrahman?.summary],
+        [
+          "Cached",
+          insights.nadabrahman?.fetchedAt
+            ? `${formatRelativeTime(insights.nadabrahman.fetchedAt)} (${formatAbsoluteTime(insights.nadabrahman.fetchedAt)})`
+            : undefined,
+        ],
+        [
+          "Refreshes in",
+          insights.nadabrahman?.refreshAfter
+            ? formatTimeUntil(insights.nadabrahman.refreshAfter)
+            : undefined,
+        ],
+      ],
+      getInsightUnavailableMessage("nadabrahman", dashboard),
+    ),
+    "",
     "## Board Status",
     "",
     `- Cache state: ${dashboard.cacheState.toUpperCase()}`,
@@ -193,15 +216,23 @@ function getInsightUnavailableMessage(
     return "Connect the Selemene Engine API key to warm this pulse section.";
   }
 
+  if (kind === "nadabrahman" && !dashboard.profile?.birthDate) {
+    return "Add birth data in Profile to derive the NadaBrahman remedy from your pulse cadence.";
+  }
+
   if (kind !== "vedicClock" && !dashboard.profile?.birthDate) {
     return `Add birth data in Profile to unlock ${getPulseModeLabel(kind).toLowerCase()} pulse.`;
+  }
+
+  if (kind === "nadabrahman") {
+    return "Refresh Pulse Now to derive the NadaBrahman remedy from the current pulse cadence.";
   }
 
   return "Refresh Pulse Now to warm this pulse section.";
 }
 
 function getPreferredInsightPendingLine(
-  preferredKind: MenuBarInsightKind,
+  preferredKind: PulseModeKind,
   dashboard: DashboardSnapshot,
 ): string {
   if (!dashboard.hasCredentials && dashboard.source === "empty") {

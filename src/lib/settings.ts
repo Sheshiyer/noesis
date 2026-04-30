@@ -1,7 +1,7 @@
 import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import {
   ExecutionRouteTarget,
-  MenuBarInsightKind,
+  PulseModeKind,
   SelemeneClientConfig,
   SelemenePreferences,
 } from "./types";
@@ -10,8 +10,8 @@ import { normalizeBaseUrl } from "./urls";
 const API_KEY_STORAGE_KEY = "noesis.apiKey";
 const BASE_URL_STORAGE_KEY = "noesis.baseUrl";
 export const DEFAULT_BASE_URL = "https://selemene.tryambakam.space";
-export const DEFAULT_PULSE_MODE: MenuBarInsightKind = "vedicClock";
-export const DEFAULT_EXECUTION_ROUTE: ExecutionRouteTarget = "selemene";
+export const DEFAULT_PULSE_MODE: PulseModeKind = "vedicClock";
+export const DEFAULT_EXECUTION_ROUTE: ExecutionRouteTarget = "witness";
 export const DEFAULT_READING_HISTORY_LIMIT = 50;
 
 export type ApiKeyStorageMode =
@@ -87,14 +87,19 @@ export async function getStoredBaseUrl(): Promise<string> {
   );
 }
 
-export function getPulseModePreference(): MenuBarInsightKind {
+export function getPulseModePreference(): PulseModeKind {
   const preferences = getConfiguredPreferences();
   return normalizePulseMode(preferences.pulseMode);
 }
 
 export function getExecutionRoutePreference(): ExecutionRouteTarget {
   const preferences = getConfiguredPreferences();
-  return normalizeExecutionRoute(preferences.executionRoute);
+  const override = (
+    process.env.NOESIS_EXECUTION_ROUTE ||
+    process.env.SELEMENE_EXECUTION_ROUTE ||
+    ""
+  ).trim();
+  return normalizeExecutionRoute(override || preferences.executionRoute);
 }
 
 export function getReadingHistoryLimitPreference(): number {
@@ -156,7 +161,7 @@ export async function clearStoredConfig(): Promise<{
   return { apiKeyStorageMode };
 }
 
-function normalizePulseMode(value: string | undefined): MenuBarInsightKind {
+function normalizePulseMode(value: string | undefined): PulseModeKind {
   switch (value) {
     case "biorhythm":
     case "vimshottari":

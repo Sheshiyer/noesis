@@ -1,137 +1,94 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   Action,
-  ActionPanel,
   Clipboard,
-  Color,
   Detail,
   Form,
   Icon,
   showToast,
   Toast,
 } from "@raycast/api";
+import { executeWorkflow } from "./lib/api";
 import {
-  getReading,
-  WitnessReadingRequest,
-  WitnessReadingResponse,
-} from "./lib/witness-api";
-import { buildWitnessReadingMarkdown as buildWitnessMarkdown } from "./lib/execution-result-presenter";
+  buildDailyWitnessInitialValues,
+  DailyWitnessFormValues,
+  resolveDailyWitnessWorkflowId,
+  resolveDailyWitnessWorkflowName,
+  serializeExecutionInput,
+  toDailyWitnessExecutionInput,
+} from "./lib/daily-witness";
+import {
+  buildWorkflowResultMarkdown,
+  listStructuredKeys,
+} from "./lib/execution-result-presenter";
+import {
+  formatAbsoluteTime,
+  formatCalculationTime,
+} from "./lib/formatters";
+import { openCommand } from "./lib/navigation";
+import { syncDashboardSnapshot } from "./lib/queries";
+import {
+  getExecutionRoutePreference,
+  getStoredBaseUrl,
+  getStoredConfig,
+} from "./lib/settings";
+import { WorkflowExecutionResult } from "./lib/types";
 import { useDashboardSnapshot } from "./lib/use-dashboard-snapshot";
-import { DashboardSnapshot } from "./lib/types";
+import { NoesisActionPanel } from "./components/noesis-actions";
 
-// ─── Types ──────────────────────────────────────────────────────────────
-
-interface WitnessFormValues {
-  birthDate: string;
-  birthTime: string;
-  name: string;
-  latitude: string;
-  longitude: string;
-  timezone: string;
+interface DailyWitnessResultState {
+  workflowId: string;
+  workflowName: string;
+  requestJson: string;
+  requestPayload: Record<string, unknown>;
+  result: WorkflowExecutionResult;
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────
-
-function buildInitialValues(
-  snapshot: DashboardSnapshot | null,
-): WitnessFormValues {
-  const profile = snapshot?.profile;
-  return {
-    birthDate: profile?.birthDate ?? "",
-    birthTime: profile?.birthTime ?? "",
-    name: profile?.fullName ?? "",
-    latitude: String(profile?.birthLocation?.latitude ?? ""),
-    longitude: String(profile?.birthLocation?.longitude ?? ""),
-    timezone:
-      profile?.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-  };
+interface DailyWitnessFailureState {
+  workflowId: string;
+  workflowName: string;
+  message: string;
+  occurredAt: string;
+  requestJson?: string;
 }
 
-function narrativeLabel(ds: {
-  consecutive_days: number;
-  total_visits: number;
-}): string {
-  if (ds.consecutive_days >= 30) return "🎓 Graduate";
-  if (ds.consecutive_days >= 14) return "🗝️ Finder";
-  if (ds.consecutive_days >= 7) return "🔥 Devoted";
-  if (ds.total_visits > 1) return "🔄 Returning";
-  return "🌱 Newcomer";
-}
-
-function buildReadingMarkdown(resp: WitnessReadingResponse): string {
-  return buildWitnessMarkdown(resp);
-}
-
-// ─── Reading Result View ────────────────────────────────────────────────
-
-function ReadingResultView({
+function WorkflowResultView({
   response,
   onBack,
+  onRetry,
 }: {
-  response: WitnessReadingResponse;
+  response: DailyWitnessResultState;
   onBack: () => void;
+  onRetry: () => void;
 }) {
-  const markdown = useMemo(() => buildReadingMarkdown(response), [response]);
-  const r = response.reading;
-  const ds = r.decoder_state;
+  const markdown = useMemo(
+    () =>
+      buildWorkflowResultMarkdown(
+        response.workflowName,
+        response.result,
+        response.requestPayload,
+      ),
+    [response],
+  );
 
   return (
     <Detail
+      navigationTitle="Daily Witness"
       markdown={markdown}
-      metadata={
-        <Detail.Metadata>
-          <Detail.Metadata.Label
-            title="Date"
-            text={r.date}
-            icon={Icon.Calendar}
-          />
-          <Detail.Metadata.Label
-            title="Primary Engine"
-            text={r.primary_engine}
-            icon={Icon.Compass}
-          />
-          <Detail.Metadata.TagList title="Decoder State">
-            <Detail.Metadata.TagList.Item
-              text={`Layer ${r.max_layer_unlocked}`}
-              color={
-                r.max_layer_unlocked >= 3
-                  ? Color.Green
-                  : r.max_layer_unlocked >= 2
-                    ? Color.Yellow
-                    : Color.SecondaryText
-              }
-            />
-            <Detail.Metadata.TagList.Item
-              text={`${ds.consecutive_days}d streak`}
-              color={
-                ds.consecutive_days >= 7 ? Color.Green : Color.SecondaryText
-              }
-            />
-            <Detail.Metadata.TagList.Item
-              text={narrativeLabel(ds)}
-              color={Color.Purple}
-            />
-          </Detail.Metadata.TagList>
-          <Detail.Metadata.Label
-            title="Engines"
-            text={r.engines_called.join(", ")}
-            icon={Icon.Bolt}
-          />
-          <Detail.Metadata.Label
-            title="Latency"
-            text={`${r.total_latency_ms}ms`}
-            icon={Icon.Clock}
-          />
-          <Detail.Metadata.Separator />
-          <Detail.Metadata.Label
-            title="Total Visits"
-            text={String(ds.total_visits)}
-          />
-          <Detail.Metadata.Label title="First Visit" text={ds.first_visit} />
-        </Detail.Metadata>
-      }
+      metadata={buildWorkflowMetadata(response)}
       actions={
-        <ActionPanel>
+        <NoesisActionPanel hideDashboardAction>
+          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onBack} />
+          <Action
+            title="Run Again"
+            icon={Icon.RotateClockwise}
+            onAction={onRetry}
+          />
+          <Action
+            title="Open Readings"
+            icon={Icon.Book}
+            onAction={() => openCommand("readings")}
+          />
           <Action
             title="Copy Reading"
             icon={Icon.Clipboard}
@@ -143,22 +100,68 @@ function ReadingResultView({
               });
             }}
           />
-          <Action
-            title="New Reading"
-            icon={Icon.RotateAntiClockwise}
-            onAction={onBack}
+          <Action.CopyToClipboard
+            title="Copy Request JSON"
+            icon={Icon.Document}
+            content={response.requestJson}
           />
-        </ActionPanel>
+          <Action.CopyToClipboard
+            title="Copy Raw Result JSON"
+            icon={Icon.Clipboard}
+            content={JSON.stringify(response.result.raw, null, 2)}
+          />
+        </NoesisActionPanel>
       }
     />
   );
 }
 
-// ─── Main Form ──────────────────────────────────────────────────────────
+function FailureResultView({
+  failure,
+  onBack,
+  onRetry,
+}: {
+  failure: DailyWitnessFailureState;
+  onBack: () => void;
+  onRetry: () => void;
+}) {
+  return (
+    <Detail
+      navigationTitle="Daily Witness"
+      markdown={buildFailureMarkdown(failure)}
+      metadata={buildFailureMetadata(failure)}
+      actions={
+        <NoesisActionPanel hideDashboardAction>
+          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onBack} />
+          <Action
+            title="Retry Run"
+            icon={Icon.RotateClockwise}
+            onAction={onRetry}
+          />
+          <Action.CopyToClipboard
+            title="Copy Error"
+            icon={Icon.Clipboard}
+            content={failure.message}
+          />
+          {failure.requestJson ? (
+            <Action.CopyToClipboard
+              title="Copy Request JSON"
+              icon={Icon.Document}
+              content={failure.requestJson}
+            />
+          ) : null}
+        </NoesisActionPanel>
+      }
+    />
+  );
+}
 
 export default function DailyWitness() {
   const { snapshot, isLoading } = useDashboardSnapshot();
-  const initial = useMemo(() => buildInitialValues(snapshot), [snapshot]);
+  const initial = useMemo(
+    () => buildDailyWitnessInitialValues(snapshot),
+    [snapshot],
+  );
 
   const [birthDate, setBirthDate] = useState(initial.birthDate);
   const [birthTime, setBirthTime] = useState(initial.birthTime);
@@ -167,28 +170,35 @@ export default function DailyWitness() {
   const [longitude, setLongitude] = useState(initial.longitude);
   const [timezone, setTimezone] = useState(initial.timezone);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [response, setResponse] = useState<WitnessReadingResponse | null>(null);
+  const [response, setResponse] = useState<DailyWitnessResultState | null>(
+    null,
+  );
+  const [failure, setFailure] = useState<DailyWitnessFailureState | null>(
+    null,
+  );
 
-  // Auto-fill from profile when snapshot loads
   useEffect(() => {
     if (snapshot?.profile) {
-      const vals = buildInitialValues(snapshot);
-      if (!birthDate) setBirthDate(vals.birthDate);
-      if (!birthTime) setBirthTime(vals.birthTime);
-      if (!name) setName(vals.name);
-      if (!latitude) setLatitude(vals.latitude);
-      if (!longitude) setLongitude(vals.longitude);
+      const values = buildDailyWitnessInitialValues(snapshot);
+      if (!birthDate) setBirthDate(values.birthDate);
+      if (!birthTime) setBirthTime(values.birthTime);
+      if (!name) setName(values.name);
+      if (!latitude) setLatitude(values.latitude);
+      if (!longitude) setLongitude(values.longitude);
     }
   }, [snapshot]);
 
-  if (response) {
-    return (
-      <ReadingResultView response={response} onBack={() => setResponse(null)} />
-    );
-  }
+  const currentValues: DailyWitnessFormValues = {
+    birthDate,
+    birthTime,
+    name,
+    latitude,
+    longitude,
+    timezone,
+  };
 
-  const handleSubmit = async () => {
-    if (!birthDate) {
+  const runWitness = async () => {
+    if (!birthDate.trim()) {
       await showToast({
         style: Toast.Style.Failure,
         title: "Birth date required",
@@ -203,48 +213,95 @@ export default function DailyWitness() {
       title: "Consulting the witness…",
     });
 
+    const workflowId = resolveDailyWitnessWorkflowId(snapshot);
+    const workflowName = resolveDailyWitnessWorkflowName(snapshot, workflowId);
+    let requestJson: string | undefined;
+
     try {
-      const request: WitnessReadingRequest = {
-        birth_date: birthDate.trim(),
-      };
-      if (birthTime.trim()) request.birth_time = birthTime.trim().slice(0, 5);
-      if (name.trim()) request.name = name.trim();
-      if (latitude.trim()) request.latitude = parseFloat(latitude);
-      if (longitude.trim()) request.longitude = parseFloat(longitude);
-      if (timezone.trim()) request.timezone = timezone.trim();
+      const config = await resolveExecutionConfig();
+      const requestInput = toDailyWitnessExecutionInput(
+        currentValues,
+        snapshot,
+        new Date().toISOString(),
+      );
+      const requestPayload = serializeExecutionInput(requestInput);
+      requestJson = JSON.stringify(requestPayload, null, 2);
 
-      const result = await getReading(request);
-      setResponse(result);
+      setResponse(null);
+      setFailure(null);
 
-      const r = result.reading;
+      const result = await executeWorkflow(config, workflowId, requestInput);
+      if (config.apiKey.trim()) {
+        await syncDashboardSnapshot({ force: true });
+      }
+
+      setResponse({
+        workflowId,
+        workflowName,
+        requestJson,
+        requestPayload,
+        result,
+      });
+
       toast.style = Toast.Style.Success;
       toast.title = "Reading received";
-      toast.message = `${r.primary_engine} · Layer ${r.max_layer_unlocked} · ${r.total_latency_ms}ms`;
+      toast.message = `${workflowName} · ${Object.keys(result.engineOutputs).length} outputs · ${formatCalculationTime(result.totalTimeMs)}`;
     } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown witness execution error";
+
+      setFailure({
+        workflowId,
+        workflowName,
+        message,
+        occurredAt: new Date().toISOString(),
+        requestJson,
+      });
+
       toast.style = Toast.Style.Failure;
       toast.title = "Reading failed";
-      toast.message = error instanceof Error ? error.message : String(error);
+      toast.message = message;
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  if (response) {
+    return (
+      <WorkflowResultView
+        response={response}
+        onBack={() => setResponse(null)}
+        onRetry={() => void runWitness()}
+      />
+    );
+  }
+
+  if (failure) {
+    return (
+      <FailureResultView
+        failure={failure}
+        onBack={() => setFailure(null)}
+        onRetry={() => void runWitness()}
+      />
+    );
+  }
+
   return (
     <Form
       isLoading={isLoading || isSubmitting}
       actions={
-        <ActionPanel>
+        <NoesisActionPanel hideDashboardAction>
           <Action.SubmitForm
             title="Get Daily Witness"
             icon={Icon.Eye}
-            onSubmit={handleSubmit}
+            onSubmit={() => void runWitness()}
           />
-        </ActionPanel>
+        </NoesisActionPanel>
       }
     >
       <Form.Description
         title="Daily Witness"
-        text="Receive your daily consciousness reading with somatic witness questions."
+        text="Run the shared witness workflow and return the dyad-backed response instead of the legacy /reading surface."
       />
       <Form.TextField
         id="birthDate"
@@ -268,7 +325,7 @@ export default function DailyWitness() {
         placeholder="Your name"
         value={name}
         onChange={setName}
-        info="Used for numerology engine calculations"
+        info="Used when the witness workflow includes name-aware engine context"
       />
       <Form.Separator />
       <Form.TextField
@@ -293,5 +350,99 @@ export default function DailyWitness() {
         onChange={setTimezone}
       />
     </Form>
+  );
+}
+
+async function resolveExecutionConfig() {
+  const storedConfig = await getStoredConfig();
+  if (storedConfig) {
+    return storedConfig;
+  }
+
+  if (getExecutionRoutePreference() !== "witness") {
+    throw new Error(
+      "Daily Witness now runs through workflow execution. Add an API key or switch Execution Route to Witness.",
+    );
+  }
+
+  return {
+    baseUrl: await getStoredBaseUrl(),
+    apiKey: "",
+  };
+}
+
+function buildWorkflowMetadata(response: DailyWitnessResultState) {
+  const result = response.result;
+  const outputEngines = Object.keys(result.engineOutputs).slice(0, 6);
+  const synthesisKeys = listStructuredKeys(result.synthesis);
+
+  return (
+    <Detail.Metadata>
+      <Detail.Metadata.Label title="Workflow" text={response.workflowName} />
+      <Detail.Metadata.Label title="Workflow ID" text={response.workflowId} />
+      <Detail.Metadata.Label
+        title="Engine Outputs"
+        text={String(Object.keys(result.engineOutputs).length)}
+      />
+      <Detail.Metadata.Label
+        title="Total Time"
+        text={formatCalculationTime(result.totalTimeMs)}
+      />
+      {result.route ? (
+        <Detail.Metadata.Label title="Route" text={result.route.label} />
+      ) : null}
+      {result.timestamp ? (
+        <Detail.Metadata.Label
+          title="Timestamp"
+          text={formatAbsoluteTime(result.timestamp)}
+        />
+      ) : null}
+      {outputEngines.length ? (
+        <Detail.Metadata.Label
+          title="Output Engines"
+          text={outputEngines.join(", ")}
+        />
+      ) : null}
+      {synthesisKeys.length ? (
+        <Detail.Metadata.Label
+          title="Synthesis Keys"
+          text={synthesisKeys.join(", ")}
+        />
+      ) : null}
+    </Detail.Metadata>
+  );
+}
+
+function buildFailureMarkdown(failure: DailyWitnessFailureState) {
+  return [
+    "# Daily Witness Failed",
+    "",
+    `Workflow: ${failure.workflowName}`,
+    "",
+    failure.message,
+    "",
+    failure.requestJson
+      ? ["## Request Payload", "", "```json", failure.requestJson, "```"].join(
+          "\n",
+        )
+      : [
+          "## Request Payload",
+          "",
+          "The request did not reach the API because local validation failed before submission.",
+        ].join("\n"),
+  ].join("\n");
+}
+
+function buildFailureMetadata(failure: DailyWitnessFailureState) {
+  return (
+    <Detail.Metadata>
+      <Detail.Metadata.Label title="Status" text="Failed" />
+      <Detail.Metadata.Label title="Workflow" text={failure.workflowName} />
+      <Detail.Metadata.Label title="Workflow ID" text={failure.workflowId} />
+      <Detail.Metadata.Label
+        title="Occurred"
+        text={formatAbsoluteTime(failure.occurredAt)}
+      />
+    </Detail.Metadata>
   );
 }
