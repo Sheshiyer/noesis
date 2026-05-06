@@ -124,7 +124,10 @@ test("buildPulseBoardMarkdown mirrors the cached menu bar pulse into full dashbo
   assert.match(markdown, /- Dasha: Maha Sun · Antar Moon · Praty Mars/);
   assert.match(markdown, /## NadaBrahman Remedy/);
   assert.match(markdown, /- Raga: Natabhairavi/);
-  assert.match(markdown, /- Remedy: Solemn · Grief Processing, Acceptance, Depth/);
+  assert.match(
+    markdown,
+    /- Remedy: Solemn · Grief Processing, Acceptance, Depth/,
+  );
   assert.match(markdown, /## Board Status/);
   assert.match(markdown, /- Cache state: FRESH/);
   assert.match(markdown, /- Combined board: /);

@@ -428,9 +428,9 @@ function buildNadabrahmanInsight(
       mood ? humanizeKey(mood) : null,
       qualities.length > 0 ? qualities.slice(0, 3).join(", ") : null,
       !mood && qualities.length === 0
-        ? readString(topRecommendation, "reason") ??
+        ? (readString(topRecommendation, "reason") ??
           readString(primaryRaga, "reason") ??
-          "Nada remedy cached"
+          "Nada remedy cached")
         : null,
     ]
       .filter(Boolean)
@@ -445,7 +445,8 @@ function buildNadabrahmanInsight(
     payload: buildInsightPayload(result, includeRawPayloads),
     fetchedAt,
     refreshAfter:
-      refreshAfterOverride ?? addMilliseconds(fetchedAt, PERSONAL_INSIGHT_REFRESH_MS),
+      refreshAfterOverride ??
+      addMilliseconds(fetchedAt, PERSONAL_INSIGHT_REFRESH_MS),
   };
 }
 
@@ -583,7 +584,9 @@ function getCadenceRefreshAfter(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
   fallbackIso: string,
 ): string {
-  const refreshTimes = SOURCE_PULSE_KINDS.map((kind) => insights[kind]?.refreshAfter)
+  const refreshTimes = SOURCE_PULSE_KINDS.map(
+    (kind) => insights[kind]?.refreshAfter,
+  )
     .map((value) => (value ? Date.parse(value) : Number.NaN))
     .filter((value) => Number.isFinite(value)) as number[];
 

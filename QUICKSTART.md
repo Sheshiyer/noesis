@@ -67,5 +67,4 @@ PATH=/opt/homebrew/bin:$PATH npm run build
 ## 7. Next References
 
 - [README](./README.md)
-- [Store Submission Notes](./docs/store-submission.md)
 - [Changelog](./CHANGELOG.md)

@@ -180,11 +180,7 @@ export default function MenuBar() {
             />
           ) : null}
           <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Nada",
-              insights.nadabrahman.summary,
-              72,
-            )}
+            title={formatMenuBarLine("Nada", insights.nadabrahman.summary, 72)}
           />
           <MenuBarExtra.Item
             title={formatMenuBarLine(
@@ -258,7 +254,11 @@ export default function MenuBar() {
         />
       ) : null}
       <MenuBarExtra.Item
-        title={formatMenuBarLine("Title Mode", getPulseModeLabel(pulseMode), 42)}
+        title={formatMenuBarLine(
+          "Title Mode",
+          getPulseModeLabel(pulseMode),
+          42,
+        )}
         icon={Icon.Text}
       />
       <MenuBarExtra.Item

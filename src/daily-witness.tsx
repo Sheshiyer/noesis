@@ -21,10 +21,7 @@ import {
   buildWorkflowResultMarkdown,
   listStructuredKeys,
 } from "./lib/execution-result-presenter";
-import {
-  formatAbsoluteTime,
-  formatCalculationTime,
-} from "./lib/formatters";
+import { formatAbsoluteTime, formatCalculationTime } from "./lib/formatters";
 import { openCommand } from "./lib/navigation";
 import { syncDashboardSnapshot } from "./lib/queries";
 import {
@@ -173,9 +170,7 @@ export default function DailyWitness() {
   const [response, setResponse] = useState<DailyWitnessResultState | null>(
     null,
   );
-  const [failure, setFailure] = useState<DailyWitnessFailureState | null>(
-    null,
-  );
+  const [failure, setFailure] = useState<DailyWitnessFailureState | null>(null);
 
   useEffect(() => {
     if (snapshot?.profile) {
@@ -248,7 +243,9 @@ export default function DailyWitness() {
       toast.message = `${workflowName} · ${Object.keys(result.engineOutputs).length} outputs · ${formatCalculationTime(result.totalTimeMs)}`;
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unknown witness execution error";
+        error instanceof Error
+          ? error.message
+          : "Unknown witness execution error";
 
       setFailure({
         workflowId,

@@ -136,10 +136,7 @@ test("buildMenuBarRemedyPlan derives a nadabrahman run from the cached pulse cad
   const pulseCadence = plan?.input.options?.pulse_cadence as
     | { source_engines?: string[] }
     | undefined;
-  assert.equal(
-    pulseCadence?.source_engines?.length,
-    3,
-  );
+  assert.equal(pulseCadence?.source_engines?.length, 3);
   assert.equal(plan?.refreshAfterOverride, "2026-04-22T13:30:00.000Z");
 });
 
@@ -258,11 +255,7 @@ test("buildMenuBarInsight derives a nadabrahman remedy summary from the top reco
           raga_name: "Natabhairavi",
           mood: "solemn",
           score: 1,
-          therapeutic_qualities: [
-            "grief_processing",
-            "acceptance",
-            "depth",
-          ],
+          therapeutic_qualities: ["grief_processing", "acceptance", "depth"],
         },
       ],
       time_recommendation: {

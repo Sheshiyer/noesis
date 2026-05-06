@@ -456,10 +456,7 @@ test("buildWorkflowResultMarkdown expands nested workflow engine result fields i
     },
   };
 
-  const markdown = buildWorkflowResultMarkdown(
-    "Daily Practice Result",
-    result,
-  );
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
 
   assert.match(markdown, /#### Result/);
   assert.match(markdown, /\*\*Physical\*\*/);
@@ -496,8 +493,7 @@ test("buildWorkflowResultMarkdown surfaces witness dyad text for workflow and en
         witnessLayer: {
           response:
             "Your body can carry more truth than your mind is admitting.",
-          synthesis:
-            "Let the physical surplus steady the emotional field.",
+          synthesis: "Let the physical surplus steady the emotional field.",
         },
         result: {
           overall_energy: 84,
@@ -513,10 +509,7 @@ test("buildWorkflowResultMarkdown surfaces witness dyad text for workflow and en
     },
   };
 
-  const markdown = buildWorkflowResultMarkdown(
-    "Daily Practice Result",
-    result,
-  );
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
 
   assert.match(
     markdown,

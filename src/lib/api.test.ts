@@ -455,13 +455,13 @@ test("calculateEngine prefers witness dyad response on the default route", async
           witness_layer: {
             response:
               "Your body is ready. Bring that readiness into one concrete act.",
-            synthesis:
-              "Action is available, but it needs conscious direction.",
+            synthesis: "Action is available, but it needs conscious direction.",
             aletheios: {
               perspective: "Your momentum is real.",
             },
             pichet: {
-              perspective: "Choose one honest action instead of three impulses.",
+              perspective:
+                "Choose one honest action instead of three impulses.",
             },
           },
           metadata: { calculation_time_ms: 11.2 },
@@ -763,15 +763,13 @@ test("executeWorkflow preserves witness dyad fields on the default route", async
       "Your body can carry more truth than your mind is admitting.",
     );
     assert.deepEqual(result.engineOutputs.biorhythm?.witnessLayer, {
-      response:
-        "Your body can carry more truth than your mind is admitting.",
+      response: "Your body can carry more truth than your mind is admitting.",
       synthesis: "Let the physical surplus steady the emotional field.",
     });
     assert.deepEqual(result.synthesis.witness_layer, {
       response:
         "You do not need a bigger plan today. You need one honest action.",
-      synthesis:
-        "Resolve the inner split by acting on what is already clear.",
+      synthesis: "Resolve the inner split by acting on what is already clear.",
       pichet: {
         perspective: "Keep it concrete.",
       },

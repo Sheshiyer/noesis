@@ -11,7 +11,7 @@
 
 Tryambakam Noesis is a native Raycast field console for running Selemene readings, workflow syntheses, Daily Witness reflections, and pulse-aware menu bar insight without turning the experience into a browser dashboard. It is designed for two audiences at once: practitioners who want fast, readable access to what is active now, and reviewers or contributors who need a clear view of routing, caching, storage, and execution behavior.
 
-[Quick Start](./QUICKSTART.md) · [Store Submission Notes](./docs/store-submission.md) · [Changelog](./CHANGELOG.md) · [GitHub Repository](https://github.com/Sheshiyer/noesis)
+[Quick Start](./QUICKSTART.md) · [Changelog](./CHANGELOG.md) · [GitHub Repository](https://github.com/Sheshiyer/noesis)
 
 | Dashboard | Engine Console | Profile Defaults |
 | --- | --- | --- |

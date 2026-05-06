@@ -470,7 +470,7 @@ export default function Dashboard() {
                   ) : null}
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="Run NadaBrahman Remedy"
+                      title="Run Nada Brahman Remedy"
                       icon={Icon.Music}
                       target={
                         <EngineExecutionForm
@@ -482,7 +482,7 @@ export default function Dashboard() {
                   ) : null}
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="View NadaBrahman Engine"
+                      title="View Nada Brahman Engine"
                       icon={Icon.ArrowRightCircle}
                       target={
                         <EngineDetailView
@@ -518,8 +518,7 @@ export default function Dashboard() {
                 tintColor: Color.Blue,
               }}
               title={{
-                value:
-                  pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
+                value: pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
                 tooltip: [
                   pulseRemedy?.title,
                   pulseRemedy?.subtitle,
@@ -591,7 +590,7 @@ export default function Dashboard() {
                 >
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="Run NadaBrahman Remedy"
+                      title="Run Nada Brahman Remedy"
                       icon={Icon.Play}
                       target={
                         <EngineExecutionForm
@@ -603,7 +602,7 @@ export default function Dashboard() {
                   ) : null}
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="View NadaBrahman Engine"
+                      title="View Nada Brahman Engine"
                       icon={Icon.ArrowRightCircle}
                       target={
                         <EngineDetailView

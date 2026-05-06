@@ -384,9 +384,9 @@ function buildNadabrahmanHighlightLines(
   const timeRecommendation = asRecord(payload.time_recommendation);
   const primaryRaga = asRecord(timeRecommendation.primary_raga);
   const topRecommendation = getTopRecommendation(payload.recommendations);
-  const qualities = readStringArray(topRecommendation.therapeutic_qualities).map(
-    (quality) => humanizePhrase(quality),
-  );
+  const qualities = readStringArray(
+    topRecommendation.therapeutic_qualities,
+  ).map((quality) => humanizePhrase(quality));
 
   const primaryName =
     readString(primaryRaga, "raga_name") ??
@@ -805,14 +805,6 @@ function buildNadabrahmanResultBlock(
   return compactMarkdown(lines);
 }
 
-function buildStructuredField(
-  label: string,
-  value: unknown,
-  depth: number,
-): string[] {
-  return buildStructuredSection(label, value, depth + 2, depth);
-}
-
 function buildStructuredSection(
   label: string,
   value: unknown,
@@ -872,12 +864,7 @@ function buildStructuredArray(
       lines.push(...buildStructuredObject(item, depth + 1, nestedHeadingLevel));
     } else if (Array.isArray(item)) {
       lines.push(
-        ...buildStructuredArray(
-          itemLabel,
-          item,
-          depth + 1,
-          nestedHeadingLevel,
-        ),
+        ...buildStructuredArray(itemLabel, item, depth + 1, nestedHeadingLevel),
       );
     } else {
       lines.push(`- ${formatInlineValue(item)}`);
@@ -1289,7 +1276,9 @@ function getTopRecommendation(value: unknown): Record<string, unknown> {
   )[0]!;
 }
 
-function getRecommendationRecords(value: unknown): Array<Record<string, unknown>> {
+function getRecommendationRecords(
+  value: unknown,
+): Array<Record<string, unknown>> {
   if (!Array.isArray(value) || value.length === 0) {
     return [];
   }
