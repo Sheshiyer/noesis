@@ -4,31 +4,33 @@
 
 Open `API Key` in Raycast and enter:
 
-- `Selemene Engine API Key` - your `nk_...` key
-- `Selemene Engine Base URL` - usually `https://selemene.tryambakam.space`
+- `Tryambakam Noesis Access Key` - your `nk_...` key
+- `Noesis Base URL` - usually `https://selemene.tryambakam.space`
 
 The command validates the account before saving configuration and warming the local cache.
 
 ## 2. Keep The Route Explicit
 
-In Raycast preferences, leave `Execution Route` on `Selemene Direct` unless you intentionally want the Witness gateway path.
+In Raycast preferences, leave `Execution Route` on `Witness Gateway` unless you intentionally want the direct Selemene path for operator testing.
 
 Available routing options:
 
-- `Selemene Direct` - default path for engine and workflow execution
-- `Witness Gateway` - explicit alternative path when you want Witness-enriched execution
+- `Witness Gateway` - default path for ritual-facing engine and workflow execution
+- `Selemene Direct` - explicit operator path when you want to bypass Witness enrichment
 
 ## 3. Open The Main Surfaces
 
 Use the command set this way:
 
-- `Dashboard` - command center and first cache warm
+- `Dashboard` - ritual-first overview and first cache warm
 - `Engines` - single-engine runs
 - `Workflows` - multi-engine synthesis
 - `Readings` - local history and interpreted result pages
 - `Profile` - birth data, timezone, default precision, default workflow
-- `Daily Witness` - somatic witness reading flow
-- `Pulse` - menu bar insight plus mirrored pulse board detail
+- `Daily Witness` - overview-first one-tap witness ritual
+- `Daily Practice` - direct entry to the fallback `daily-practice` workflow
+- `Developer Tools` - connection, routing, usage, cache, and sync diagnostics
+- `Pulse & Remedy` - menu bar remedy with source pulse fallback
 
 ## 4. Understand What Stays Local
 
@@ -57,6 +59,8 @@ The most important operational preferences are:
 - `cacheRawPayloads`
 - `pulseMode`
 
+`pulseMode` now controls the source-pulse fallback when a current NadaBrahman remedy is unavailable.
+
 ## 6. Local Verification
 
 ```bash
@@ -67,5 +71,4 @@ PATH=/opt/homebrew/bin:$PATH npm run build
 ## 7. Next References
 
 - [README](./README.md)
-- [Store Submission Notes](./docs/store-submission.md)
 - [Changelog](./CHANGELOG.md)

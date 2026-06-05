@@ -8,9 +8,9 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
-  /** Selemene Engine API Key - Secure password preference for the Selemene Engine key. Preferred over legacy local storage. */
+  /** Tryambakam Noesis Access Key - Secure password preference for your Noesis access key. Preferred over legacy local storage. */
   "apiKey"?: string,
-  /** Selemene Engine Base URL - Optional fallback API URL when onboarding has not stored one yet. */
+  /** Noesis Base URL - Optional fallback API URL when onboarding has not stored one yet. */
   "baseUrl": string,
   /** Daily Witness API URL - Trusted Witness gateway URL used only when the execution route preference is set to Witness. */
   "witnessUrl": string,
@@ -20,8 +20,8 @@ type ExtensionPreferences = {
   "readingHistoryLimit": "25" | "50" | "100",
   /** Store Raw Payloads - Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads. */
   "cacheRawPayloads": boolean,
-  /** Pulse Title Mode - Choose which current insight the menu bar title should prioritize. */
-  "pulseMode": "vedicClock" | "biorhythm" | "vimshottari"
+  /** Pulse Fallback Mode - Choose which source pulse should drive the menu bar when the current NadaBrahman remedy is unavailable. */
+  "pulseMode": "nadabrahman" | "vedicClock" | "biorhythm" | "vimshottari"
 }
 
 /** Preferences accessible in all the extension's commands */
@@ -42,6 +42,10 @@ declare namespace Preferences {
   export type ApiKey = ExtensionPreferences & {}
   /** Preferences accessible in the `daily-witness` command */
   export type DailyWitness = ExtensionPreferences & {}
+  /** Preferences accessible in the `daily-practice` command */
+  export type DailyPractice = ExtensionPreferences & {}
+  /** Preferences accessible in the `developer-tools` command */
+  export type DeveloperTools = ExtensionPreferences & {}
   /** Preferences accessible in the `menubar` command */
   export type Menubar = ExtensionPreferences & {}
 }
@@ -61,6 +65,10 @@ declare namespace Arguments {
   export type ApiKey = {}
   /** Arguments passed to the `daily-witness` command */
   export type DailyWitness = {}
+  /** Arguments passed to the `daily-practice` command */
+  export type DailyPractice = {}
+  /** Arguments passed to the `developer-tools` command */
+  export type DeveloperTools = {}
   /** Arguments passed to the `menubar` command */
   export type Menubar = {}
 }

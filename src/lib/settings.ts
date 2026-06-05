@@ -10,7 +10,7 @@ import { normalizeBaseUrl } from "./urls";
 const API_KEY_STORAGE_KEY = "noesis.apiKey";
 const BASE_URL_STORAGE_KEY = "noesis.baseUrl";
 export const DEFAULT_BASE_URL = "https://selemene.tryambakam.space";
-export const DEFAULT_PULSE_MODE: PulseModeKind = "vedicClock";
+export const DEFAULT_PULSE_MODE: PulseModeKind = "nadabrahman";
 export const DEFAULT_EXECUTION_ROUTE: ExecutionRouteTarget = "witness";
 export const DEFAULT_READING_HISTORY_LIMIT = 50;
 
@@ -163,6 +163,7 @@ export async function clearStoredConfig(): Promise<{
 
 function normalizePulseMode(value: string | undefined): PulseModeKind {
   switch (value) {
+    case "nadabrahman":
     case "biorhythm":
     case "vimshottari":
     case "vedicClock":

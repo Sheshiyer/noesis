@@ -8,7 +8,6 @@ import { NoesisActionPanel } from "./components/noesis-actions";
 import {
   EngineDetailView,
   EnginesBrowser,
-  ReadingDetailView,
   ReadingsBrowser,
   WorkflowDetailView,
   WorkflowsBrowser,
@@ -16,38 +15,34 @@ import {
 import { OnboardingForm } from "./components/onboarding-form";
 import { ProfileForm } from "./components/profile-form";
 import {
+  buildRecommendedNowItems,
+  deriveContextQuality,
+  findWorkflowById,
+  getPulseInputKinds,
+  toEngineId,
+} from "./lib/dashboard-ritual";
+import {
   formatAbsoluteTime,
   formatCompactCount,
   formatCount,
-  formatHostLabel,
   formatPhaseBadge,
   formatPhaseLabel,
-  formatRateLimit,
-  formatReadingSubtitle,
   formatRelativeTime,
   formatTimeUntil,
-  formatUptime,
-  formatUsageWindow,
-  getCacheColor,
-  getHealthColor,
   getPhaseColor,
-  truncate,
 } from "./lib/formatters";
 import {
   getDashboardEngines,
   getDashboardWorkflows,
 } from "./lib/dashboard-catalog";
 import {
-  getPreferredInsight,
+  getPreferredSourceInsight,
   getPulseModeLabel,
+  getSelectedSourcePulseKind,
 } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
-import { buildPulseBoardMarkdown } from "./lib/pulse-board-presenter";
 import { readMenuBarSnapshot } from "./lib/queries";
-import {
-  getExecutionRoutePreference,
-  getPulseModePreference,
-} from "./lib/settings";
+import { getPulseModePreference } from "./lib/settings";
 import { useDashboardSnapshot } from "./lib/use-dashboard-snapshot";
 import {
   DashboardSnapshot,
@@ -107,17 +102,8 @@ export default function Dashboard() {
 
   const dashboardEngines = snapshot ? getDashboardEngines(snapshot) : [];
   const dashboardWorkflows = snapshot ? getDashboardWorkflows(snapshot) : [];
-  const recentReadings = snapshot?.readings.slice(0, 6) ?? [];
-  const totalReadingCount =
-    snapshot?.readingStats.reduce((sum, entry) => sum + entry.count, 0) ?? 0;
-  const maxWorkflowSpan = snapshot
-    ? Math.max(...snapshot.workflows.map((workflow) => workflow.engineCount), 0)
-    : 0;
   const pulseMode = getPulseModePreference();
-  const executionRoute = getExecutionRoutePreference();
-  const executionRouteLabel =
-    executionRoute === "witness" ? "Witness Gateway" : "Selemene Direct";
-  const pulseModeLabel = getPulseModeLabel(pulseMode);
+  const selectedSourceKind = getSelectedSourcePulseKind(pulseMode);
   const pulseBoardSnapshot = snapshot
     ? (menuBarSnapshot ?? {
         dashboard: snapshot,
@@ -125,32 +111,24 @@ export default function Dashboard() {
         syncIssues: [],
       })
     : null;
-  const currentPulse = getPreferredInsight(
-    pulseBoardSnapshot?.insights ?? {},
-    pulseMode,
-  );
-  const pulseRemedy = pulseBoardSnapshot?.insights.nadabrahman;
-  const pulseKind = currentPulse?.kind ?? pulseMode;
-  const pulseTitle =
-    currentPulse?.title ?? getPulsePendingTitle(pulseModeLabel, snapshot);
-  const pulseDetailSummary =
-    pulseRemedy?.summary ??
-    currentPulse?.summary ??
-    getPulsePendingSummary(pulseModeLabel, snapshot);
-  const pulseEngine =
-    snapshot && currentPulse
-      ? snapshot.engines.find((engine) => engine.id === currentPulse.engineId)
-      : undefined;
+  const insights = pulseBoardSnapshot?.insights ?? {};
+  const currentPulse = getPreferredSourceInsight(insights, pulseMode);
+  const pulseRemedy = insights.nadabrahman;
   const pulseRemedyEngine = snapshot
     ? snapshot.engines.find((engine) => engine.id === "nadabrahman")
     : undefined;
+  const contextQuality = deriveContextQuality(snapshot);
+  const recommendedNow =
+    snapshot && pulseBoardSnapshot
+      ? buildRecommendedNowItems(snapshot, insights, pulseMode)
+      : [];
 
   return (
     <List
       isLoading={isLoading}
       isShowingDetail
       navigationTitle="Tryambakam Noesis"
-      searchBarPlaceholder="Search pulse, flows, engines, and readings"
+      searchBarPlaceholder="Search remedies, pulse inputs, engines, and flows"
     >
       {snapshot ? (
         <>
@@ -158,16 +136,17 @@ export default function Dashboard() {
             <List.Item
               icon={{
                 source: Icon.PersonCircle,
-                tintColor: snapshot.profile ? Color.Blue : Color.Orange,
+                tintColor: getContextQualityColor(contextQuality.status),
               }}
               title={{
-                value: "Your Profile",
+                value: "Profile Defaults",
                 tooltip:
                   snapshot.profile?.fullName ??
-                  "Set shared birth data, timezone, and reusable witness defaults.",
+                  "Set shared birth data, timezone, and reusable ritual defaults.",
               }}
               keywords={[
                 "profile",
+                contextQuality.status,
                 snapshot.profile?.fullName ?? "",
                 snapshot.profile?.email ?? "",
                 snapshot.profile?.timezone ?? "",
@@ -175,8 +154,8 @@ export default function Dashboard() {
               accessories={[
                 {
                   tag: {
-                    value: snapshot.profile ? "READY" : "SETUP",
-                    color: snapshot.profile ? Color.Green : Color.Orange,
+                    value: contextQuality.label.toUpperCase(),
+                    color: getContextQualityColor(contextQuality.status),
                   },
                 },
                 {
@@ -188,22 +167,33 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Your Profile",
+                    "# Profile Defaults",
                     "",
-                    "Keep your birth data and timezone ready so every reading starts from the same witness context.",
+                    "Shared birth data and timezone shape every remedy, Daily Witness run, and ritual workflow in this extension.",
                     "",
+                    `- Context Quality: ${contextQuality.label}`,
+                    `- Context Note: ${contextQuality.summary}`,
                     snapshot.profile
                       ? `- Active operator: ${snapshot.profile.fullName}`
-                      : "- No live profile cached yet. Onboarding or a refresh will pull it in once authenticated.",
-                    snapshot.profile?.tier
-                      ? `- Access tier: ${snapshot.profile.tier}`
-                      : "- Access tier unknown",
+                      : "- No live profile cached yet.",
                     snapshot.profile?.birthDate
                       ? `- Birth date: ${snapshot.profile.birthDate}`
-                      : "- Birth date not set",
+                      : "- Birth date: Missing",
+                    snapshot.profile?.birthTime
+                      ? `- Birth time: ${snapshot.profile.birthTime}`
+                      : "- Birth time: Missing",
                     snapshot.profile?.timezone
                       ? `- Timezone: ${snapshot.profile.timezone}`
-                      : "- Timezone not set",
+                      : "- Timezone: Missing",
+                    typeof snapshot.profile?.birthLocation?.latitude ===
+                      "number" &&
+                    typeof snapshot.profile?.birthLocation?.longitude ===
+                      "number"
+                      ? `- Coordinates: ${snapshot.profile.birthLocation.latitude}, ${snapshot.profile.birthLocation.longitude}`
+                      : "- Coordinates: Missing",
+                    contextQuality.missingFields.length > 0
+                      ? `- Missing fields: ${contextQuality.missingFields.join(", ")}`
+                      : "- Missing fields: None",
                   ].join("\n")}
                 />
               }
@@ -217,116 +207,7 @@ export default function Dashboard() {
                   <Action
                     title="Open Profile Command"
                     icon={Icon.AppWindowList}
-                    shortcut={{ modifiers: ["cmd"], key: "p" }}
                     onAction={() => openCommand("profile")}
-                  />
-                </NoesisActionPanel>
-              }
-            />
-            <List.Item
-              icon={Icon.Stars}
-              title={{
-                value: "Explore Engines",
-                tooltip:
-                  "Run individual Selemene engines and inspect phase coverage.",
-              }}
-              keywords={["engines", "console", "catalog", "phases"]}
-              accessories={[
-                {
-                  text: formatCompactCount(snapshot.engines.length, "E"),
-                  tooltip: `${snapshot.engines.length} engines cached locally`,
-                },
-                {
-                  text: formatCompactCount(totalReadingCount, "R"),
-                  tooltip: `${totalReadingCount} cached readings across engine history`,
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Explore Engines",
-                    "",
-                    "Browse the full engine library, run individual readings, and inspect past outputs without leaving the extension.",
-                    "",
-                    `- ${formatCount(snapshot.engines.length, "engine")} in the current cache`,
-                    `- ${formatCount(totalReadingCount, "reading")} represented across engine stats`,
-                    "",
-                    "Inside the engine console, Enter opens the execution form instead of refreshing the dashboard.",
-                  ].join("\n")}
-                />
-              }
-              actions={
-                <NoesisActionPanel onRefresh={reload} hideDashboardAction>
-                  <Action.Push
-                    title="Open Engine Library"
-                    icon={Icon.ArrowRightCircle}
-                    target={
-                      <EnginesBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
-                  />
-                  <Action
-                    title="Open Engines Command"
-                    icon={Icon.AppWindowList}
-                    shortcut={{ modifiers: ["cmd"], key: "e" }}
-                    onAction={() => openCommand("engines")}
-                  />
-                </NoesisActionPanel>
-              }
-            />
-            <List.Item
-              icon={Icon.Network}
-              title={{
-                value: "Guided Flows",
-                tooltip:
-                  "Inspect composite orchestration chains and launch multi-engine readings.",
-              }}
-              keywords={["workflows", "studio", "chains", "orchestration"]}
-              accessories={[
-                {
-                  text: formatCompactCount(snapshot.workflows.length, "W"),
-                  tooltip: `${snapshot.workflows.length} workflows cached locally`,
-                },
-                {
-                  text: maxWorkflowSpan
-                    ? formatCompactCount(maxWorkflowSpan, "E")
-                    : "--",
-                  tooltip: maxWorkflowSpan
-                    ? `Largest workflow spans ${maxWorkflowSpan} engines`
-                    : "No workflow span cached yet",
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Guided Flows",
-                    "",
-                    "Move through curated multi-engine practices when you want a fuller reading rather than a single engine pass.",
-                    "",
-                    `- ${formatCount(snapshot.workflows.length, "workflow")} cached locally`,
-                    `- Largest workflow spans ${maxWorkflowSpan} engines`,
-                  ].join("\n")}
-                />
-              }
-              actions={
-                <NoesisActionPanel onRefresh={reload} hideDashboardAction>
-                  <Action.Push
-                    title="Open Guided Flows"
-                    icon={Icon.ArrowRightCircle}
-                    target={
-                      <WorkflowsBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
-                  />
-                  <Action
-                    title="Open Workflows Command"
-                    icon={Icon.AppWindowList}
-                    shortcut={{ modifiers: ["cmd"], key: "w" }}
-                    onAction={() => openCommand("workflows")}
                   />
                 </NoesisActionPanel>
               }
@@ -336,7 +217,7 @@ export default function Dashboard() {
               title={{
                 value: "Reading Archive",
                 tooltip:
-                  "Inspect recent witness prompts, payloads, and cached outcomes.",
+                  "Inspect previous readings, witness responses, and stored results.",
               }}
               keywords={["readings", "archive", "history", "results"]}
               accessories={[
@@ -354,7 +235,7 @@ export default function Dashboard() {
                   markdown={[
                     "# Reading Archive",
                     "",
-                    "Return to previous readings, witness responses, and stored results from earlier sessions.",
+                    "Return to previous readings, witness responses, and stored ritual outputs from earlier sessions.",
                     "",
                     `- ${formatCount(snapshot.readings.length, "recent reading")} in the local history window`,
                     `- Latest sync landed ${formatRelativeTime(snapshot.timestamps.readings)}`,
@@ -376,7 +257,6 @@ export default function Dashboard() {
                   <Action
                     title="Open Readings Command"
                     icon={Icon.AppWindowList}
-                    shortcut={{ modifiers: ["cmd"], key: "r" }}
                     onAction={() => openCommand("readings")}
                   />
                 </NoesisActionPanel>
@@ -384,146 +264,19 @@ export default function Dashboard() {
             />
           </List.Section>
 
-          <List.Section title="Pulse">
-            <List.Item
-              icon={{
-                source: getPulseIcon(pulseKind),
-                tintColor: getPulseColor(pulseKind),
-              }}
-              title={{
-                value: pulseTitle,
-                tooltip: [
-                  pulseModeLabel,
-                  pulseTitle,
-                  currentPulse?.subtitle,
-                  pulseRemedy?.title,
-                  pulseDetailSummary,
-                ]
-                  .filter(Boolean)
-                  .join("\n"),
-              }}
-              keywords={[
-                pulseModeLabel,
-                currentPulse?.engineId ?? "",
-                pulseRemedy?.engineId ?? "",
-                pulseTitle,
-                pulseRemedy?.title ?? "",
-                pulseDetailSummary,
-              ]}
-              accessories={[
-                {
-                  tag: {
-                    value: pulseModeLabel,
-                    color: getPulseColor(pulseKind),
-                  },
-                },
-                {
-                  text: currentPulse
-                    ? formatTimeUntil(currentPulse.refreshAfter)
-                    : snapshot.profile?.birthDate || pulseMode === "vedicClock"
-                      ? "Sync"
-                      : "Profile",
-                  tooltip: currentPulse
-                    ? `Refreshes in ${formatTimeUntil(currentPulse.refreshAfter)}`
-                    : snapshot.profile?.birthDate || pulseMode === "vedicClock"
-                      ? "Refresh the pulse cache to surface the current title."
-                      : "Add birth data in Profile to unlock this pulse mode.",
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={buildPulseBoardMarkdown(
-                    pulseBoardSnapshot,
-                    pulseMode,
-                  )}
-                />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={reload}
-                  hideDashboardAction
-                  refreshTitle="Refresh Pulse"
-                >
-                  {pulseEngine ? (
-                    <Action.Push
-                      title="Run Pulse Engine"
-                      icon={Icon.Play}
-                      target={
-                        <EngineExecutionForm
-                          engine={pulseEngine}
-                          snapshot={snapshot}
-                        />
-                      }
-                    />
-                  ) : null}
-                  {pulseEngine ? (
-                    <Action.Push
-                      title="View Pulse Engine"
-                      icon={Icon.ArrowRightCircle}
-                      target={
-                        <EngineDetailView
-                          engine={pulseEngine}
-                          snapshot={snapshot}
-                        />
-                      }
-                    />
-                  ) : null}
-                  {pulseRemedyEngine ? (
-                    <Action.Push
-                      title="Run NadaBrahman Remedy"
-                      icon={Icon.Music}
-                      target={
-                        <EngineExecutionForm
-                          engine={pulseRemedyEngine}
-                          snapshot={snapshot}
-                        />
-                      }
-                    />
-                  ) : null}
-                  {pulseRemedyEngine ? (
-                    <Action.Push
-                      title="View NadaBrahman Engine"
-                      icon={Icon.ArrowRightCircle}
-                      target={
-                        <EngineDetailView
-                          engine={pulseRemedyEngine}
-                          snapshot={snapshot}
-                        />
-                      }
-                    />
-                  ) : null}
-                  {!pulseEngine ? (
-                    <Action.Push
-                      title="Edit Profile"
-                      icon={Icon.Pencil}
-                      target={<ProfileForm snapshot={snapshot} />}
-                    />
-                  ) : null}
-                  <Action.Push
-                    title="Browse Engines"
-                    icon={Icon.AppWindowList}
-                    target={
-                      <EnginesBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
-                  />
-                </NoesisActionPanel>
-              }
-            />
+          <List.Section title="Current Remedy">
             <List.Item
               icon={{
                 source: Icon.Music,
                 tintColor: Color.Blue,
               }}
               title={{
-                value:
-                  pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
+                value: pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
                 tooltip: [
                   pulseRemedy?.title,
                   pulseRemedy?.subtitle,
                   pulseRemedy?.summary,
+                  contextQuality.summary,
                 ]
                   .filter(Boolean)
                   .join("\n"),
@@ -537,31 +290,31 @@ export default function Dashboard() {
               accessories={[
                 {
                   tag: {
-                    value: "REMEDY",
-                    color: Color.Blue,
+                    value: pulseRemedy
+                      ? "REMEDY"
+                      : contextQuality.label.toUpperCase(),
+                    color: pulseRemedy
+                      ? Color.Blue
+                      : getContextQualityColor(contextQuality.status),
                   },
                 },
                 {
                   text: pulseRemedy
                     ? formatTimeUntil(pulseRemedy.refreshAfter)
-                    : snapshot.profile?.birthDate
-                      ? "Sync"
-                      : "Profile",
+                    : contextQuality.label,
                   tooltip: pulseRemedy
                     ? `Refreshes in ${formatTimeUntil(pulseRemedy.refreshAfter)}`
-                    : snapshot.profile?.birthDate
-                      ? "Refresh the pulse cache to derive the latest remedy."
-                      : "Add birth data in Profile to unlock the derived remedy.",
+                    : contextQuality.summary,
                 },
               ]}
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# NadaBrahman Remedy",
+                    "# Current Remedy",
                     "",
                     pulseRemedy
-                      ? "Derived from the current pulse cadence to give you the raga or sonic direction most aligned with this moment."
-                      : getRemedyPendingSummary(snapshot),
+                      ? "NadaBrahman is the primary outcome of the pulse cadence and currently leads the ritual surface."
+                      : getRemedyPendingSummary(snapshot, contextQuality),
                     "",
                     pulseRemedy?.title
                       ? `- Current raga: ${pulseRemedy.title}`
@@ -573,11 +326,10 @@ export default function Dashboard() {
                       ? `- Remedy note: ${pulseRemedy.summary}`
                       : null,
                     currentPulse?.title
-                      ? `- Derived from: ${pulseModeLabel} · ${currentPulse.title}`
-                      : null,
-                    pulseRemedy?.fetchedAt
-                      ? `- Cached: ${formatRelativeTime(pulseRemedy.fetchedAt)} (${formatAbsoluteTime(pulseRemedy.fetchedAt)})`
-                      : null,
+                      ? `- Supported by ${getPulseModeLabel(selectedSourceKind)}: ${currentPulse.title}`
+                      : `- Supporting source pulse: ${getPulseModeLabel(selectedSourceKind)} pending`,
+                    `- Context Quality: ${contextQuality.label}`,
+                    `- Context Note: ${contextQuality.summary}`,
                   ]
                     .filter(Boolean)
                     .join("\n")}
@@ -589,10 +341,20 @@ export default function Dashboard() {
                   hideDashboardAction
                   refreshTitle="Refresh Pulse"
                 >
+                  <Action
+                    title="Run Daily Witness"
+                    icon={Icon.Eye}
+                    onAction={() => openCommand("daily-witness")}
+                  />
+                  <Action
+                    title="Run Daily Practice"
+                    icon={Icon.Play}
+                    onAction={() => openCommand("daily-practice")}
+                  />
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="Run NadaBrahman Remedy"
-                      icon={Icon.Play}
+                      title="Run Nadabrahman Remedy"
+                      icon={Icon.Music}
                       target={
                         <EngineExecutionForm
                           engine={pulseRemedyEngine}
@@ -603,7 +365,7 @@ export default function Dashboard() {
                   ) : null}
                   {pulseRemedyEngine ? (
                     <Action.Push
-                      title="View NadaBrahman Engine"
+                      title="View Nadabrahman Engine"
                       icon={Icon.ArrowRightCircle}
                       target={
                         <EngineDetailView
@@ -613,253 +375,238 @@ export default function Dashboard() {
                       }
                     />
                   ) : null}
-                  {!pulseRemedyEngine ? (
-                    <Action.Push
-                      title="Edit Profile"
-                      icon={Icon.Pencil}
-                      target={<ProfileForm snapshot={snapshot} />}
-                    />
-                  ) : null}
+                  <Action
+                    title="Open Developer Tools"
+                    icon={Icon.Hammer}
+                    onAction={() => openCommand("developer-tools")}
+                  />
                 </NoesisActionPanel>
               }
             />
           </List.Section>
 
-          <List.Section title="Developer Tools">
-            <List.Item
-              icon={{
-                source: snapshot.hasCredentials ? Icon.Globe : Icon.Key,
-                tintColor: snapshot.syncError
-                  ? Color.Orange
-                  : snapshot.health
-                    ? getHealthColor(snapshot.health.status)
-                    : snapshot.hasCredentials
-                      ? Color.Green
-                      : Color.SecondaryText,
-              }}
-              title={
-                snapshot.hasCredentials
-                  ? "Connection & Routing"
-                  : "Offline Connection"
-              }
-              keywords={[
-                snapshot.baseUrl,
-                formatHostLabel(snapshot.baseUrl),
-                snapshot.health?.status ?? "",
-                snapshot.syncError ?? "",
-                ...snapshot.syncIssues.map((issue) => issue.resource),
-              ]}
-              accessories={[
-                {
-                  tag: {
-                    value: snapshot.hasCredentials
-                      ? (snapshot.health?.status?.toUpperCase() ?? "LIVE")
-                      : "OFFLINE",
-                    color: snapshot.hasCredentials
-                      ? snapshot.health
-                        ? getHealthColor(snapshot.health.status)
-                        : Color.Green
-                      : Color.Orange,
-                  },
-                },
-                {
-                  text: formatHostLabel(snapshot.baseUrl),
-                  tooltip: snapshot.baseUrl,
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Connection & Routing",
-                    "",
-                    snapshot.hasCredentials
-                      ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from the Selemene Engine."
-                      : "No live key is connected. The dashboard is operating from the local cache until the API Key command reconnects the engine.",
-                    "",
-                    `- Base URL: \`${snapshot.baseUrl}\``,
-                    `- Access: ${snapshot.hasCredentials ? "API key connected" : "Cache only"}`,
-                    `- Engine/workflow route: ${executionRouteLabel}`,
-                    snapshot.health
-                      ? `- Service: ${snapshot.health.status}`
-                      : "- Service: No live health snapshot cached",
-                    snapshot.health
-                      ? `- Version: ${snapshot.health.version}`
-                      : "- Version: Unknown",
-                    snapshot.health
-                      ? `- Uptime: ${formatUptime(snapshot.health.uptimeSeconds)}`
-                      : "- Uptime: Unknown",
-                    snapshot.health
-                      ? `- Catalog: ${snapshot.health.enginesLoaded} engines / ${snapshot.health.workflowsLoaded} workflows`
-                      : `- Catalog cache: ${snapshot.engines.length} engines / ${snapshot.workflows.length} workflows`,
-                    `- Rate limit: ${formatRateLimit(snapshot.rateLimit)}`,
-                    snapshot.syncError
-                      ? `- Sync issue: ${snapshot.syncError}`
-                      : "- Sync issue: None",
-                    ...(snapshot.syncIssues.length > 0
-                      ? [
-                          "",
-                          "## Sync Issues",
-                          "",
-                          ...snapshot.syncIssues
-                            .slice(0, 4)
-                            .map(
-                              (issue) =>
-                                `- ${issue.resource} (${issue.target}): ${issue.message}`,
+          <List.Section title="Pulse Inputs">
+            {getPulseInputKinds().map((kind) => {
+              const insight = insights[kind];
+              const engineId = insight?.engineId ?? toEngineId(kind);
+              const engine = snapshot.engines.find(
+                (entry) => entry.id === engineId,
+              );
+
+              return (
+                <List.Item
+                  key={kind}
+                  icon={{
+                    source: getPulseIcon(kind),
+                    tintColor: getPulseColor(kind),
+                  }}
+                  title={{
+                    value:
+                      insight?.title ??
+                      `${getPulseModeLabel(kind)} Input Pending`,
+                    tooltip: [
+                      insight?.title,
+                      insight?.subtitle,
+                      insight?.summary,
+                    ]
+                      .filter(Boolean)
+                      .join("\n"),
+                  }}
+                  keywords={[
+                    kind,
+                    getPulseModeLabel(kind),
+                    insight?.engineId ?? "",
+                    insight?.title ?? "",
+                  ]}
+                  accessories={[
+                    {
+                      tag: {
+                        value: kind === selectedSourceKind ? "ACTIVE" : "INPUT",
+                        color:
+                          kind === selectedSourceKind
+                            ? getPulseColor(kind)
+                            : Color.SecondaryText,
+                      },
+                    },
+                    {
+                      text: insight
+                        ? formatRelativeTime(insight.fetchedAt)
+                        : contextQuality.label,
+                      tooltip: insight
+                        ? `Cached ${formatAbsoluteTime(insight.fetchedAt)}`
+                        : getPulseInputPendingSummary(
+                            kind,
+                            snapshot,
+                            contextQuality,
+                          ),
+                    },
+                  ]}
+                  detail={
+                    <List.Item.Detail
+                      markdown={[
+                        `# ${getPulseModeLabel(kind)}`,
+                        "",
+                        insight
+                          ? "This source engine contributes explicit cadence context for the current remedy."
+                          : getPulseInputPendingSummary(
+                              kind,
+                              snapshot,
+                              contextQuality,
                             ),
-                        ]
-                      : []),
-                  ].join("\n")}
+                        "",
+                        insight?.title
+                          ? `- Current signal: ${insight.title}`
+                          : null,
+                        insight?.subtitle
+                          ? `- Supporting detail: ${insight.subtitle}`
+                          : null,
+                        insight?.summary
+                          ? `- Summary: ${insight.summary}`
+                          : null,
+                        insight?.refreshAfter
+                          ? `- Refreshes in: ${formatTimeUntil(insight.refreshAfter)}`
+                          : null,
+                        `- Context Quality: ${contextQuality.label}`,
+                      ]
+                        .filter(Boolean)
+                        .join("\n")}
+                    />
+                  }
+                  actions={
+                    <NoesisActionPanel
+                      onRefresh={reload}
+                      hideDashboardAction
+                      refreshTitle="Refresh Pulse"
+                    >
+                      {engine ? (
+                        <Action.Push
+                          title="Run Pulse Engine"
+                          icon={Icon.Play}
+                          target={
+                            <EngineExecutionForm
+                              engine={engine}
+                              snapshot={snapshot}
+                            />
+                          }
+                        />
+                      ) : null}
+                      {engine ? (
+                        <Action.Push
+                          title="View Pulse Engine"
+                          icon={Icon.ArrowRightCircle}
+                          target={
+                            <EngineDetailView
+                              engine={engine}
+                              snapshot={snapshot}
+                            />
+                          }
+                        />
+                      ) : null}
+                    </NoesisActionPanel>
+                  }
                 />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={reload}
-                  hideDashboardAction
-                  refreshTitle="Refresh Developer Tools"
-                >
-                  <Action
-                    title={
-                      snapshot.hasCredentials
-                        ? "Edit Access Key"
-                        : "Connect Access Key"
-                    }
-                    icon={Icon.Key}
-                    onAction={() => openCommand("api-key")}
-                  />
-                </NoesisActionPanel>
-              }
-            />
-            <List.Item
-              icon={Icon.BarChart}
-              title="Usage & Limits"
-              accessories={[
-                {
-                  text: snapshot.usage
-                    ? formatCompactCount(snapshot.usage.daily.total, "D")
-                    : "--",
-                  tooltip: snapshot.usage
-                    ? `Daily ${snapshot.usage.daily.total}`
-                    : "No daily usage window cached yet",
-                },
-                {
-                  text: snapshot.usage
-                    ? formatCompactCount(snapshot.usage.monthly.total, "M")
-                    : "--",
-                  tooltip: snapshot.usage
-                    ? `Monthly ${snapshot.usage.monthly.total}`
-                    : "No monthly usage window cached yet",
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Usage & Limits",
-                    "",
-                    snapshot.usage
-                      ? "Current request volume and engine distribution from the cached usage window."
-                      : "No usage snapshot is cached yet. Refresh after reconnecting if you want current request totals.",
-                    "",
-                    snapshot.usage
-                      ? `- Daily: ${formatUsageWindow(snapshot.usage.daily)}`
-                      : "- Daily: Unavailable",
-                    snapshot.usage
-                      ? `- Monthly: ${formatUsageWindow(snapshot.usage.monthly)}`
-                      : "- Monthly: Unavailable",
-                    snapshot.usage?.engineBreakdown.length
-                      ? `- Active engines: ${snapshot.usage.engineBreakdown
-                          .slice(0, 5)
-                          .map(
-                            (entry) =>
-                              `${entry.engineId} (${entry.requestCount})`,
-                          )
-                          .join(", ")}`
-                      : "- Active engines: No cached engine breakdown yet",
-                    `- Rate limit: ${formatRateLimit(snapshot.rateLimit)}`,
-                  ].join("\n")}
+              );
+            })}
+          </List.Section>
+
+          <List.Section title="Recommended Now">
+            {recommendedNow.map((item) => {
+              const workflow =
+                item.workflowId && snapshot
+                  ? findWorkflowById(snapshot, item.workflowId)
+                  : undefined;
+              const engine =
+                item.engineId && snapshot
+                  ? snapshot.engines.find((entry) => entry.id === item.engineId)
+                  : undefined;
+
+              return (
+                <List.Item
+                  key={item.id}
+                  icon={getRecommendedIcon(item.id)}
+                  title={{
+                    value: item.title,
+                    tooltip: `${item.title}\n${item.subtitle}`,
+                  }}
+                  keywords={[item.id, item.title, item.subtitle]}
+                  accessories={[
+                    {
+                      text: item.subtitle,
+                      tooltip: item.summary,
+                    },
+                  ]}
+                  detail={
+                    <List.Item.Detail
+                      markdown={[
+                        `# ${item.title}`,
+                        "",
+                        item.summary,
+                        "",
+                        `- Signal: ${item.subtitle}`,
+                      ].join("\n")}
+                    />
+                  }
+                  actions={
+                    <NoesisActionPanel
+                      onRefresh={reload}
+                      hideDashboardAction
+                      refreshTitle="Refresh Pulse"
+                    >
+                      {item.id === "daily-witness" ? (
+                        <Action
+                          title="Run Daily Witness"
+                          icon={Icon.Eye}
+                          onAction={() => openCommand("daily-witness")}
+                        />
+                      ) : null}
+                      {item.id === "daily-practice" ? (
+                        <Action
+                          title="Run Daily Practice"
+                          icon={Icon.Play}
+                          onAction={() => openCommand("daily-practice")}
+                        />
+                      ) : null}
+                      {item.id === "nadabrahman-remedy" && engine ? (
+                        <Action.Push
+                          title="Run Nadabrahman Remedy"
+                          icon={Icon.Music}
+                          target={
+                            <EngineExecutionForm
+                              engine={engine}
+                              snapshot={snapshot}
+                            />
+                          }
+                        />
+                      ) : null}
+                      {item.id === "source-pulse" && engine ? (
+                        <Action.Push
+                          title="Run Pulse Engine"
+                          icon={Icon.Play}
+                          target={
+                            <EngineExecutionForm
+                              engine={engine}
+                              snapshot={snapshot}
+                            />
+                          }
+                        />
+                      ) : null}
+                      {workflow ? (
+                        <Action.Push
+                          title="Open Workflow Form"
+                          icon={Icon.Network}
+                          target={
+                            <WorkflowExecutionForm
+                              workflow={workflow}
+                              snapshot={snapshot}
+                            />
+                          }
+                        />
+                      ) : null}
+                    </NoesisActionPanel>
+                  }
                 />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={reload}
-                  hideDashboardAction
-                  refreshTitle="Refresh Developer Tools"
-                >
-                  <Action.Push
-                    title="Browse Readings"
-                    icon={Icon.Book}
-                    target={
-                      <ReadingsBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
-                  />
-                  <Action.Push
-                    title="Browse Workflows"
-                    icon={Icon.Network}
-                    target={
-                      <WorkflowsBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
-                  />
-                </NoesisActionPanel>
-              }
-            />
-            <List.Item
-              icon={{
-                source: Icon.Circle,
-                tintColor: getCacheColor(snapshot.cacheState),
-              }}
-              title="Cache & Sync"
-              keywords={[
-                "sqlite",
-                snapshot.cacheState,
-                "cache",
-                snapshot.source,
-              ]}
-              accessories={[
-                {
-                  tag: {
-                    value: snapshot.cacheState.toUpperCase(),
-                    color: getCacheColor(snapshot.cacheState),
-                  },
-                },
-                {
-                  text: formatRelativeTime(snapshot.timestamps.lastSyncAt),
-                  tooltip: snapshot.timestamps.lastSyncAt
-                    ? `Last sync ${formatAbsoluteTime(snapshot.timestamps.lastSyncAt)}`
-                    : "The cache has not been synchronized yet",
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Cache & Sync",
-                    "",
-                    snapshot.syncError ??
-                      "The local sqlite cache is active and serving command data first.",
-                    "",
-                    `- State: ${snapshot.cacheState.toUpperCase()}`,
-                    `- Source: ${snapshot.source.toUpperCase()}`,
-                    `- Last sync: ${formatRelativeTime(snapshot.timestamps.lastSyncAt)} (${formatAbsoluteTime(snapshot.timestamps.lastSyncAt)})`,
-                    `- Service snapshot: ${formatRelativeTime(snapshot.timestamps.service)}`,
-                    `- Profile snapshot: ${formatRelativeTime(snapshot.timestamps.profile)}`,
-                    `- Usage snapshot: ${formatRelativeTime(snapshot.timestamps.usage)}`,
-                    `- Catalog snapshot: ${formatRelativeTime(snapshot.timestamps.catalog)}`,
-                    `- Readings snapshot: ${formatRelativeTime(snapshot.timestamps.readings)}`,
-                  ].join("\n")}
-                />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={reload}
-                  hideDashboardAction
-                  refreshTitle="Refresh Developer Tools"
-                />
-              }
-            />
+              );
+            })}
           </List.Section>
 
           {dashboardEngines.length ? (
@@ -905,7 +652,7 @@ export default function Dashboard() {
                         "",
                         `${formatCount(getReadingCount(snapshot, engine.id), "cached reading")} in the current dashboard snapshot.`,
                         "",
-                        "This main dashboard section now shows the full cached engine catalog. Enter opens the execution form, with engine detail still available as a secondary action.",
+                        "The full engine catalog remains visible below the guided ritual layer.",
                       ].join("\n")}
                     />
                   }
@@ -970,9 +717,9 @@ export default function Dashboard() {
                       markdown={[
                         `# ${workflow.name}`,
                         "",
-                        workflow.description || "Composite Selemene workflow.",
+                        workflow.description || "Composite ritual workflow.",
                         "",
-                        "This main dashboard section now shows the full cached workflow catalog.",
+                        "The full workflow catalog remains visible below the guided ritual layer.",
                         "",
                         workflow.engineIds.length
                           ? `Engines: ${workflow.engineIds.join(", ")}`
@@ -1018,72 +765,6 @@ export default function Dashboard() {
               ))}
             </List.Section>
           ) : null}
-
-          {recentReadings.length ? (
-            <List.Section title="Recent Readings">
-              {recentReadings.map((reading) => (
-                <List.Item
-                  key={reading.id}
-                  icon={reading.workflowId ? Icon.Network : Icon.Book}
-                  title={{
-                    value:
-                      truncate(reading.witnessPrompt, 72) || reading.engineId,
-                    tooltip: [
-                      reading.engineId,
-                      reading.workflowId,
-                      reading.witnessPrompt,
-                    ]
-                      .filter(Boolean)
-                      .join("\n"),
-                  }}
-                  keywords={[
-                    reading.engineId,
-                    reading.workflowId ?? "",
-                    reading.id,
-                  ]}
-                  accessories={[
-                    { text: formatRelativeTime(reading.createdAt) },
-                  ]}
-                  detail={
-                    <List.Item.Detail
-                      markdown={[
-                        `# ${truncate(reading.witnessPrompt, 56) || reading.engineId}`,
-                        "",
-                        `${formatReadingSubtitle(reading.engineId, reading.workflowId)}`,
-                        "",
-                        truncate(reading.witnessPrompt, 240) ||
-                          "_No witness prompt stored._",
-                      ].join("\n")}
-                    />
-                  }
-                  actions={
-                    <NoesisActionPanel onRefresh={reload} hideDashboardAction>
-                      <Action.Push
-                        title="Open Reading"
-                        icon={Icon.Book}
-                        target={
-                          <ReadingDetailView
-                            reading={reading}
-                            snapshot={snapshot}
-                          />
-                        }
-                      />
-                      <Action.Push
-                        title="Browse Readings"
-                        icon={Icon.AppWindowList}
-                        target={
-                          <ReadingsBrowser
-                            initialSnapshot={snapshot}
-                            syncOnMount={false}
-                          />
-                        }
-                      />
-                    </NoesisActionPanel>
-                  }
-                />
-              ))}
-            </List.Section>
-          ) : null}
         </>
       ) : null}
     </List>
@@ -1097,64 +778,55 @@ function getReadingCount(snapshot: DashboardSnapshot, engineId: string) {
   );
 }
 
-function getPulsePendingTitle(
-  pulseModeLabel: string,
-  snapshot: DashboardSnapshot | null | undefined,
-): string {
-  if (!snapshot?.hasCredentials) {
-    return "Reconnect to Warm Pulse";
+function getContextQualityColor(
+  status: ReturnType<typeof deriveContextQuality>["status"],
+) {
+  switch (status) {
+    case "complete":
+      return Color.Green;
+    case "usable":
+      return Color.Yellow;
+    case "partial":
+    default:
+      return Color.Orange;
   }
-
-  if (pulseModeLabel !== "TCM Organ" && !snapshot.profile?.birthDate) {
-    return `${pulseModeLabel} Needs Profile`;
-  }
-
-  return pulseModeLabel === "TCM Organ"
-    ? "Current TCM Organ"
-    : `${pulseModeLabel} Pending`;
 }
 
-function getPulsePendingSummary(
-  pulseModeLabel: string,
-  snapshot: DashboardSnapshot | null | undefined,
-): string {
-  if (!snapshot?.hasCredentials) {
-    return "Reconnect the API key to refresh live pulse data from the Selemene Engine.";
-  }
-
-  if (pulseModeLabel !== "TCM Organ" && !snapshot.profile?.birthDate) {
-    return `Add birth data and timezone in Profile to unlock ${pulseModeLabel.toLowerCase()} pulse.`;
-  }
-
-  return "Refresh the pulse cache to surface the current reading.";
-}
-
-function getRemedyPendingTitle(
-  snapshot: DashboardSnapshot | null | undefined,
-): string {
-  if (!snapshot?.hasCredentials) {
+function getRemedyPendingTitle(snapshot: DashboardSnapshot): string {
+  if (!snapshot.hasCredentials) {
     return "Reconnect to Derive Remedy";
-  }
-
-  if (!snapshot.profile?.birthDate) {
-    return "Remedy Needs Profile";
   }
 
   return "NadaBrahman Remedy Pending";
 }
 
 function getRemedyPendingSummary(
-  snapshot: DashboardSnapshot | null | undefined,
+  snapshot: DashboardSnapshot,
+  contextQuality: ReturnType<typeof deriveContextQuality>,
 ): string {
-  if (!snapshot?.hasCredentials) {
+  if (!snapshot.hasCredentials) {
     return "Reconnect the API key so the extension can derive a NadaBrahman remedy from the live pulse cadence.";
   }
 
-  if (!snapshot.profile?.birthDate) {
-    return "Add birth data and timezone in Profile to unlock the derived NadaBrahman remedy.";
+  return contextQuality.status === "partial"
+    ? `Profile context is still partial. ${contextQuality.summary}`
+    : "Refresh the pulse cache to derive the current NadaBrahman remedy from the source cadence.";
+}
+
+function getPulseInputPendingSummary(
+  kind: MenuBarInsightKind,
+  snapshot: DashboardSnapshot,
+  contextQuality: ReturnType<typeof deriveContextQuality>,
+): string {
+  if (!snapshot.hasCredentials) {
+    return "Reconnect the API key to warm this pulse input.";
   }
 
-  return "Refresh the pulse cache to derive the current NadaBrahman remedy from the source pulse cadence.";
+  if (kind !== "vedicClock" && contextQuality.status === "partial") {
+    return `This pulse input depends on stronger profile context. ${contextQuality.summary}`;
+  }
+
+  return "Refresh the pulse cache to surface this source input.";
 }
 
 function getPulseIcon(kind: MenuBarInsightKind): Icon {
@@ -1182,5 +854,25 @@ function getPulseColor(kind: MenuBarInsightKind): Color {
     case "vedicClock":
     default:
       return Color.Yellow;
+  }
+}
+
+function getRecommendedIcon(
+  id:
+    | "daily-witness"
+    | "daily-practice"
+    | "nadabrahman-remedy"
+    | "source-pulse",
+): Icon {
+  switch (id) {
+    case "daily-witness":
+      return Icon.Eye;
+    case "daily-practice":
+      return Icon.Play;
+    case "nadabrahman-remedy":
+      return Icon.Music;
+    case "source-pulse":
+    default:
+      return Icon.Clock;
   }
 }

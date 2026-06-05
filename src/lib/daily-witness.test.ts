@@ -55,6 +55,29 @@ test("resolveDailyWitnessWorkflowId falls back to daily-practice", () => {
   );
 });
 
+test("resolveDailyWitnessWorkflowId honors an explicit workflow override", () => {
+  assert.equal(
+    resolveDailyWitnessWorkflowId(
+      createSnapshot({
+        profile: {
+          id: "user-1",
+          email: "user@example.com",
+          fullName: "Witness User",
+          tier: "pro",
+          consciousnessLevel: 3,
+          experiencePoints: 144,
+          preferences: {
+            default_workflow: "custom-flow",
+          },
+          fetchedAt: "2026-05-01T00:00:00Z",
+        },
+      }),
+      "daily-practice",
+    ),
+    "daily-practice",
+  );
+});
+
 test("resolveDailyWitnessWorkflowName prefers cached workflow metadata", () => {
   const snapshot = createSnapshot({
     workflows: [

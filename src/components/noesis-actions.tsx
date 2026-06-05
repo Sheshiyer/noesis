@@ -40,6 +40,11 @@ export function NoesisActionPanel({
           />
         ) : null}
         <Action
+          title="Open Developer Tools"
+          icon={Icon.Hammer}
+          onAction={() => openCommand("developer-tools")}
+        />
+        <Action
           title="Edit Access Key"
           icon={Icon.Key}
           shortcut={{ modifiers: ["cmd"], key: "o" }}

@@ -6,16 +6,17 @@ import {
   MenuBarInsightSnapshot,
   PrecisionLevel,
   PulseModeKind,
+  SourcePulseModeKind,
   UserProfileSnapshot,
 } from "./types";
 
 export const PERSONAL_INSIGHT_REFRESH_MS = 2 * 60 * 60 * 1000;
-const MENU_BAR_TITLE_FALLBACK_ORDER: PulseModeKind[] = [
+const MENU_BAR_SOURCE_FALLBACK_ORDER: SourcePulseModeKind[] = [
   "vedicClock",
   "vimshottari",
   "biorhythm",
 ];
-const SOURCE_PULSE_KINDS: PulseModeKind[] = [
+const SOURCE_PULSE_KINDS: SourcePulseModeKind[] = [
   "vedicClock",
   "biorhythm",
   "vimshottari",
@@ -179,9 +180,20 @@ export function buildMenuBarTitle(
   preferredKind: PulseModeKind,
   syncError?: string,
 ): string {
-  const preferredInsight = getPreferredInsight(insights, preferredKind);
-  if (preferredInsight) {
-    return formatInsightTitle(preferredInsight.kind, preferredInsight.title);
+  const remedyInsight = insights.nadabrahman;
+  if (remedyInsight?.title) {
+    return formatInsightTitle(remedyInsight.kind, remedyInsight.title);
+  }
+
+  const preferredSourceInsight = getPreferredSourceInsight(
+    insights,
+    preferredKind,
+  );
+  if (preferredSourceInsight) {
+    return formatInsightTitle(
+      preferredSourceInsight.kind,
+      preferredSourceInsight.title,
+    );
   }
 
   if (!dashboard.hasCredentials && dashboard.source === "empty") {
@@ -201,14 +213,19 @@ export function buildMenuBarTitle(
 
 export function buildPulseSubtitle(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  preferredKind: PulseModeKind = "nadabrahman",
 ): string {
-  const parts = [
-    insights.nadabrahman?.summary,
-    insights.vedicClock?.summary,
-    insights.biorhythm?.summary,
-    insights.vimshottari?.summary,
-  ].filter(Boolean);
-  return shortenText(parts.join(" · "), MENU_BAR_SUBTITLE_MAX_LENGTH);
+  if (insights.nadabrahman?.summary) {
+    return shortenText(
+      insights.nadabrahman.summary,
+      MENU_BAR_SUBTITLE_MAX_LENGTH,
+    );
+  }
+
+  return shortenText(
+    getPreferredSourceInsight(insights, preferredKind)?.summary ?? "",
+    MENU_BAR_SUBTITLE_MAX_LENGTH,
+  );
 }
 
 export function getPulseModeLabel(kind: MenuBarInsightKind): string {
@@ -428,9 +445,9 @@ function buildNadabrahmanInsight(
       mood ? humanizeKey(mood) : null,
       qualities.length > 0 ? qualities.slice(0, 3).join(", ") : null,
       !mood && qualities.length === 0
-        ? readString(topRecommendation, "reason") ??
+        ? (readString(topRecommendation, "reason") ??
           readString(primaryRaga, "reason") ??
-          "Nada remedy cached"
+          "Nada remedy cached")
         : null,
     ]
       .filter(Boolean)
@@ -445,7 +462,8 @@ function buildNadabrahmanInsight(
     payload: buildInsightPayload(result, includeRawPayloads),
     fetchedAt,
     refreshAfter:
-      refreshAfterOverride ?? addMilliseconds(fetchedAt, PERSONAL_INSIGHT_REFRESH_MS),
+      refreshAfterOverride ??
+      addMilliseconds(fetchedAt, PERSONAL_INSIGHT_REFRESH_MS),
   };
 }
 
@@ -517,9 +535,22 @@ export function getPreferredInsight(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
   preferredKind: PulseModeKind,
 ): MenuBarInsightSnapshot | undefined {
+  if (insights.nadabrahman?.title) {
+    return insights.nadabrahman;
+  }
+
+  return getPreferredSourceInsight(insights, preferredKind);
+}
+
+export function getPreferredSourceInsight(
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  preferredKind: PulseModeKind,
+): MenuBarInsightSnapshot | undefined {
   const order = [
-    preferredKind,
-    ...MENU_BAR_TITLE_FALLBACK_ORDER.filter((kind) => kind !== preferredKind),
+    getSelectedSourcePulseKind(preferredKind),
+    ...MENU_BAR_SOURCE_FALLBACK_ORDER.filter(
+      (kind) => kind !== getSelectedSourcePulseKind(preferredKind),
+    ),
   ];
 
   for (const kind of order) {
@@ -530,6 +561,12 @@ export function getPreferredInsight(
   }
 
   return undefined;
+}
+
+export function getSelectedSourcePulseKind(
+  preferredKind: PulseModeKind,
+): SourcePulseModeKind {
+  return preferredKind === "nadabrahman" ? "vedicClock" : preferredKind;
 }
 
 function formatInsightTitle(kind: MenuBarInsightKind, title: string): string {
@@ -583,7 +620,9 @@ function getCadenceRefreshAfter(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
   fallbackIso: string,
 ): string {
-  const refreshTimes = SOURCE_PULSE_KINDS.map((kind) => insights[kind]?.refreshAfter)
+  const refreshTimes = SOURCE_PULSE_KINDS.map(
+    (kind) => insights[kind]?.refreshAfter,
+  )
     .map((value) => (value ? Date.parse(value) : Number.NaN))
     .filter((value) => Number.isFinite(value)) as number[];
 

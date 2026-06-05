@@ -41,6 +41,13 @@ test("buildEngineResultMarkdown turns nested engine payloads into readable secti
           reason: "Balancing all body systems before sleep",
         },
       ],
+      upcoming_transitions: [
+        {
+          time: "23:00",
+          new_dosha: "Vata",
+          description: "The late-night airy period begins",
+        },
+      ],
       timezone: {
         local_hour: 21,
         offset_minutes: 330,
@@ -73,9 +80,17 @@ test("buildEngineResultMarkdown turns nested engine payloads into readable secti
   assert.match(markdown, /## Reading Brief/);
   assert.match(markdown, /- Current organ: TripleWarmer/);
   assert.match(markdown, /## Request Context/);
-  assert.match(markdown, /### Recommendations/);
-  assert.match(markdown, /\*\*Recommendation 1\*\*/);
-  assert.match(markdown, /### Timezone/);
+  assert.match(markdown, /### Recommended Activities/);
+  assert.match(
+    markdown,
+    /\| Light reading \| Neutral \| Balancing all body systems before sleep \|/,
+  );
+  assert.match(markdown, /### Upcoming Transitions/);
+  assert.match(
+    markdown,
+    /\| 23:00 \| Vata \| The late-night airy period begins \|/,
+  );
+  assert.match(markdown, /### Timezone Resolution/);
   assert.match(markdown, /## Response Metadata/);
   assert.doesNotMatch(markdown, /## Raw Response Preview/);
 });
@@ -119,6 +134,71 @@ test("buildEngineResultMarkdown prefers dyad witness response and shows the witn
   assert.match(markdown, /## Witness Layer/);
   assert.match(markdown, /- Response: Your body is ready\./);
   assert.match(markdown, /### Pichet/);
+});
+
+test("buildEngineResultMarkdown maps biorhythm cycles and forecast rows into tables", () => {
+  const result: EngineExecutionResult = {
+    engineId: "biorhythm",
+    metadata: {
+      calculation_time_ms: 9,
+    },
+    result: {
+      overall_energy: 54.35883860107817,
+      critical_days: ["2026-05-09", "2026-05-10"],
+      physical: {
+        percentage: 18.445602783706587,
+        phase: "Falling",
+        days_until_critical: 9,
+        days_until_peak: 15,
+      },
+      emotional: {
+        percentage: 81.17449009292713,
+        phase: "Rising",
+        days_until_critical: 11,
+        days_until_peak: 4,
+      },
+      intellectual: {
+        percentage: 64.08662784208342,
+        phase: "Falling",
+        days_until_critical: 2,
+        days_until_peak: 27,
+      },
+      intuitive: {
+        percentage: 13.213804466338946,
+        phase: "Rising",
+        days_until_critical: 5,
+        days_until_peak: 15,
+      },
+      spiritual: {
+        percentage: 84.82755145315464,
+        phase: "Falling",
+        days_until_critical: 7,
+        days_until_peak: 47,
+      },
+      forecast: [
+        {
+          date: "2026-05-09",
+          overall_energy: 53.974681373054494,
+          physical: 9.151505349482791,
+          spiritual: 80.34000729092679,
+          intuitive: 19.28936436551303,
+        },
+      ],
+    },
+    raw: {
+      engine_id: "biorhythm",
+    },
+  };
+
+  const markdown = buildEngineResultMarkdown("Biorhythm Result", result);
+
+  assert.match(markdown, /### Current Cycles/);
+  assert.match(markdown, /\| Cycle \| State \| Critical \| Peak \|/);
+  assert.match(markdown, /\| Physical \| Falling · 18% \| 9d \| 15d \|/);
+  assert.match(markdown, /### Critical Window/);
+  assert.match(markdown, /2026-05-09, 2026-05-10/);
+  assert.match(markdown, /### Forecast/);
+  assert.match(markdown, /\| 2026-05-09 \| 54% \| 9% \| 80% \| 19% \|/);
 });
 
 test("buildEngineResultMarkdown maps nadabrahman remedy responses and request context cleanly", () => {
@@ -371,7 +451,20 @@ test("buildWorkflowResultMarkdown organizes synthesis and per-engine outputs", (
         engineId: "panchanga",
         witnessPrompt: "Observe the fasting current.",
         result: {
-          tithi: "Ekadashi",
+          tithi_name: "Ekadashi",
+          tithi_index: 11,
+          tithi_value: 11.4,
+          nakshatra_name: "Uttara Phalguni",
+          nakshatra_index: 12,
+          nakshatra_value: 12.1,
+          yoga_name: "Siddha",
+          yoga_index: 20,
+          yoga_value: 20.7,
+          vara_name: "Mangalavara (Tuesday)",
+          vara_index: 2,
+          karana_name: "Vishti",
+          karana_index: 6,
+          karana_value: 8,
         },
         metadata: {
           calculation_time_ms: 12.5,
@@ -409,9 +502,11 @@ test("buildWorkflowResultMarkdown organizes synthesis and per-engine outputs", (
 
   assert.match(markdown, /## Run Brief/);
   assert.match(markdown, /- Engine outputs returned: 2/);
-  assert.match(markdown, /## Synthesis Map/);
+  assert.match(markdown, /## Dyad Lens/);
+  assert.match(markdown, /### Synthesis/);
   assert.match(markdown, /### Panchanga/);
-  assert.match(markdown, /Observe the fasting current\./);
+  assert.match(markdown, /\| Factor \| Name \| Index \| Value \|/);
+  assert.match(markdown, /\| Tithi \| Ekadashi \| 11 \| 11\.40 \|/);
   assert.match(markdown, /### Numerology/);
   assert.doesNotMatch(markdown, /## Raw Response Preview/);
 });
@@ -431,6 +526,7 @@ test("buildWorkflowResultMarkdown expands nested workflow engine result fields i
           "Your physical cycle is at 100% while emotional is at 5%.",
         result: {
           overall_energy: 68,
+          critical_days: ["2026-05-05", "2026-05-06"],
           physical: {
             percentage: 100,
             phase: "Peak",
@@ -444,6 +540,15 @@ test("buildWorkflowResultMarkdown expands nested workflow engine result fields i
             percentage: 99,
             phase: "Peak",
           },
+          forecast: [
+            {
+              date: "2026-05-05",
+              overall_energy: 70,
+              physical: 100,
+              spiritual: 48,
+              intuitive: 43,
+            },
+          ],
         },
         metadata: {
           calculation_time_ms: 3.4,
@@ -456,17 +561,14 @@ test("buildWorkflowResultMarkdown expands nested workflow engine result fields i
     },
   };
 
-  const markdown = buildWorkflowResultMarkdown(
-    "Daily Practice Result",
-    result,
-  );
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
 
   assert.match(markdown, /#### Result/);
-  assert.match(markdown, /\*\*Physical\*\*/);
-  assert.match(markdown, /- Percentage: 100/);
-  assert.match(markdown, /- Critical Days: 2026-05-05, 2026-05-06/);
-  assert.match(markdown, /\*\*Emotional\*\*/);
-  assert.match(markdown, /\*\*Intellectual\*\*/);
+  assert.match(markdown, /\*\*Current Cycles\*\*/);
+  assert.match(markdown, /\| Physical \| Peak · 100% \| — \| — \|/);
+  assert.match(markdown, /\| Emotional \| Rising · 5% \| — \| — \|/);
+  assert.match(markdown, /\*\*Critical Window\*\*/);
+  assert.match(markdown, /2026-05-05, 2026-05-06/);
   assert.doesNotMatch(markdown, /Physical: \d+ field\(s\)/);
   assert.doesNotMatch(markdown, /Emotional: \d+ field\(s\)/);
   assert.doesNotMatch(markdown, /Intellectual: \d+ field\(s\)/);
@@ -496,8 +598,7 @@ test("buildWorkflowResultMarkdown surfaces witness dyad text for workflow and en
         witnessLayer: {
           response:
             "Your body can carry more truth than your mind is admitting.",
-          synthesis:
-            "Let the physical surplus steady the emotional field.",
+          synthesis: "Let the physical surplus steady the emotional field.",
         },
         result: {
           overall_energy: 84,
@@ -513,21 +614,472 @@ test("buildWorkflowResultMarkdown surfaces witness dyad text for workflow and en
     },
   };
 
-  const markdown = buildWorkflowResultMarkdown(
-    "Daily Practice Result",
-    result,
-  );
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
 
   assert.match(
     markdown,
     /You do not need a bigger plan today\. You need one honest action\./,
   );
+  assert.match(markdown, /### Synthesis/);
+  assert.match(markdown, /### Pichet/);
   assert.match(markdown, /### Biorhythm/);
   assert.match(
     markdown,
     /Your body can carry more truth than your mind is admitting\./,
   );
   assert.match(markdown, /#### Witness Layer/);
+});
+
+test("buildWorkflowResultMarkdown prefers richer workflow fields and caps overflow cleanly", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    readingId: "reading-42",
+    createdAt: "2026-05-08T00:22:16.559619348Z",
+    subject: "Evening integration through disciplined closure.",
+    totalTimeMs: 31.7,
+    timestamp: "2026-05-08T00:22:16.559619348Z",
+    evidence: [
+      "transits",
+      "vedic-clock",
+      "biorhythm",
+      "panchanga",
+      "vimshottari",
+      "nadabrahman",
+      "numerology",
+      "tarot",
+      "iching",
+    ],
+    report: {
+      opening_response:
+        "The richer workflow report should lead the page when it is present.",
+      run_brief: {
+        route: "Witness Gateway",
+        posture: "Close loops before opening new ones.",
+      },
+    },
+    synthesis: {
+      witness_layer: {
+        response:
+          "Fallback witness text should not outrank the explicit opening response.",
+        synthesis: "Use the cleaner report sections when available.",
+        aletheios: {
+          perspective: "The day favors completion over expansion.",
+        },
+        pichet: {
+          perspective: "Keep the body steady and finish one thing well.",
+        },
+        decoder_state: {
+          total_visits: 4,
+          nested: {
+            streak: {
+              current: 3,
+            },
+          },
+        },
+        max_layer_unlocked: 2,
+      },
+      summary: "A reflective and disciplined day.",
+    },
+    engineOutputs: {
+      biorhythm: {
+        engineId: "biorhythm",
+        witnessPrompt: "Carry the truth already available in the body.",
+        result: {
+          overall_energy: 84,
+        },
+        metadata: {
+          calculation_time_ms: 10.4,
+        },
+        raw: {},
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+      reading_id: "reading-42",
+      created_at: "2026-05-08T00:22:16.559619348Z",
+      subject: "Evening integration through disciplined closure.",
+      evidence: [
+        "transits",
+        "vedic-clock",
+        "biorhythm",
+        "panchanga",
+        "vimshottari",
+        "nadabrahman",
+        "numerology",
+        "tarot",
+        "iching",
+      ],
+      report: {
+        opening_response:
+          "The richer workflow report should lead the page when it is present.",
+        run_brief: {
+          route: "Witness Gateway",
+          posture: "Close loops before opening new ones.",
+        },
+      },
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
+
+  assert.match(
+    markdown,
+    /The richer workflow report should lead the page when it is present\./,
+  );
+  assert.match(markdown, /- Reading ID: reading-42/);
+  assert.match(
+    markdown,
+    /- Subject: Evening integration through disciplined closure\./,
+  );
+  assert.match(markdown, /- Route: Witness Gateway/);
+  assert.match(markdown, /### Aletheios/);
+  assert.match(markdown, /### Pichet/);
+  assert.match(markdown, /### Progression Metadata/);
+  assert.match(markdown, /#### Decoder State/);
+  assert.match(markdown, /\*\*Nested\*\*/);
+  assert.match(markdown, /## Why This Reading/);
+  assert.match(
+    markdown,
+    /- Inputs: Transits, Vedic Clock, Biorhythm, Panchanga, Vimshottari, Nadabrahman, Numerology, Tarot; 1 more not shown/,
+  );
+  assert.doesNotMatch(markdown, /Fallback witness text should not outrank/);
+});
+
+test("buildWorkflowResultMarkdown turns engine-only evidence into a compact why brief", () => {
+  const arrayEvidenceResult: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    totalTimeMs: 17.2,
+    timestamp: "2026-06-05T02:30:00Z",
+    evidence: [
+      "transits",
+      "vedic-clock",
+      "biorhythm",
+      "panchanga",
+      "vimshottari",
+      "nadabrahman",
+      "numerology",
+      "tarot",
+      "iching",
+    ],
+    engineOutputs: {},
+    synthesis: {
+      witness_layer: {
+        response: "A concise reading should still explain the inputs used.",
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+  const objectEvidenceResult: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    totalTimeMs: 12,
+    timestamp: "2026-06-05T02:32:00Z",
+    evidence: {
+      engines_used: ["vedic-clock", "biorhythm"],
+    },
+    engineOutputs: {},
+    synthesis: {
+      witness_layer: {
+        response: "The inputs should read as a brief, not nested evidence.",
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+
+  const arrayMarkdown = buildWorkflowResultMarkdown(
+    "Daily Practice Result",
+    arrayEvidenceResult,
+  );
+  const objectMarkdown = buildWorkflowResultMarkdown(
+    "Daily Practice Result",
+    objectEvidenceResult,
+  );
+
+  assert.match(arrayMarkdown, /## Why This Reading/);
+  assert.match(
+    arrayMarkdown,
+    /- Inputs: Transits, Vedic Clock, Biorhythm, Panchanga, Vimshottari, Nadabrahman, Numerology, Tarot; 1 more not shown/,
+  );
+  assert.doesNotMatch(arrayMarkdown, /## Evidence/);
+  assert.match(objectMarkdown, /## Why This Reading/);
+  assert.match(objectMarkdown, /- Inputs: Vedic Clock, Biorhythm/);
+  assert.doesNotMatch(objectMarkdown, /### Engines Used/);
+  assert.doesNotMatch(objectMarkdown, /### Evidence Details/);
+});
+
+test("buildWorkflowResultMarkdown summarizes structured workflow subjects cleanly", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    readingId: "rdg_20260508033207_daily-practice_cf7af2e3",
+    createdAt: "2026-05-08T03:32:07.413Z",
+    subject: {
+      birth_date: "1991-08-13",
+      birth_time: "13:19",
+      timezone: "Asia/Kolkata",
+      latitude: 12.9716,
+      longitude: 77.5946,
+      location_label: null,
+    },
+    evidence: {
+      engines_used: ["transits", "biorhythm", "vedic-clock", "panchanga"],
+    },
+    engineOutputs: {},
+    synthesis: {
+      witness_layer: {
+        response: "Use the clean summary line for the subject context.",
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+      subject: {
+        birth_date: "1991-08-13",
+        birth_time: "13:19",
+        timezone: "Asia/Kolkata",
+        latitude: 12.9716,
+        longitude: 77.5946,
+        location_label: null,
+      },
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
+
+  assert.match(
+    markdown,
+    /- Subject: 1991-08-13 at 13:19 · Asia\/Kolkata · 12\.9716, 77\.5946/,
+  );
+  assert.match(markdown, /## Request Context/);
+  assert.match(markdown, /- Birth Date: 1991-08-13/);
+  assert.match(markdown, /- Birth Time: 13:19/);
+  assert.doesNotMatch(markdown, /Subject: \d+ field\(s\)/);
+});
+
+test("buildWorkflowResultMarkdown promotes live ritual fields above the full reflection blob", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    readingId: "rdg_20260508034434_daily-practice_b3bc3e67",
+    createdAt: "2026-05-08T03:44:34.559Z",
+    subject: {
+      name: "Cumbipuram Nateshan Sheshnarayan Iyer",
+      birth_date: "1991-08-13",
+      birth_time: "13:31",
+      timezone: "Asia/Calcutta",
+      latitude: 12.9716,
+      longitude: 77.5946,
+    },
+    evidence: {
+      engines_used: ["vedic-clock", "biorhythm", "transits", "panchanga"],
+      contributions: [
+        {
+          engine_id: "vedic-clock",
+          signal: "Spleen timing is carrying the strongest temporal signal.",
+          impact:
+            "This shapes when action will feel coherent instead of forced.",
+        },
+      ],
+    },
+    engineOutputs: {
+      biorhythm: {
+        engineId: "biorhythm",
+        witnessPrompt:
+          "Your spiritual cycle is at 85% while intuitive is at 13%.",
+        result: {
+          overall_energy: 54.35883860107817,
+          critical_days: ["2026-05-09", "2026-05-10"],
+          forecast: [
+            {
+              date: "2026-05-09",
+              overall_energy: 53.974681373054494,
+              physical: 9.151505349482791,
+              spiritual: 80.34000729092679,
+              intuitive: 19.28936436551303,
+            },
+          ],
+        },
+        metadata: {
+          calculation_time_ms: 0.517262,
+        },
+        raw: {},
+      },
+    },
+    synthesis: {
+      witness_layer: {
+        title:
+          "Unified Reflection for 2026-05-08, 9 - 11 AM (Spleen/Earth, Kapha)",
+        summary: "---",
+        practice: [
+          "Protect the next critical window: 2026-05-09 to 2026-05-10.",
+          "Spleen meridian active (Earth).",
+        ],
+        question: "Notice: how does this contrast show up in your day?",
+        response:
+          "**Unified Reflection for 2026-05-08, 9 - 11 AM (Spleen/Earth, Kapha)**\n\n### 1. What the body and mind are calling us to review",
+        aletheios: {
+          perspective:
+            "Spleen timing is carrying the strongest temporal signal.",
+        },
+        pichet: {
+          perspective: "Physical energy low - honor rest, body is integrating.",
+        },
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
+
+  assert.match(markdown, /## Current Reading/);
+  assert.match(
+    markdown,
+    /### Unified Reflection for 2026-05-08, 9 - 11 AM \(Spleen\/Earth, Kapha\)/,
+  );
+  assert.match(markdown, /### Practice/);
+  assert.match(
+    markdown,
+    /Protect the next critical window: 2026-05-09 to 2026-05-10\./,
+  );
+  assert.match(markdown, /### Reflection Question/);
+  assert.match(
+    markdown,
+    /- Synthesis: Unified Reflection for 2026-05-08, 9 - 11 AM \(Spleen\/Earth, Kapha\)/,
+  );
+  assert.match(markdown, /## Why This Reading/);
+  assert.match(markdown, /\| Input \| Signal \| Impact \|/);
+  assert.match(
+    markdown,
+    /\| Vedic Clock \| Spleen timing is carrying the strongest temporal signal\. \| This shapes when action will feel coherent instead of forced\. \|/,
+  );
+  assert.match(markdown, /\*\*Forecast\*\*/);
+  assert.match(markdown, /## Full Reflection/);
+  assert.doesNotMatch(markdown, /- Synthesis: \*\*/);
+  assert.ok(
+    markdown.indexOf("## Why This Reading") <
+      markdown.indexOf("## Engine Outputs"),
+  );
+  assert.ok(
+    markdown.indexOf("## Engine Outputs") <
+      markdown.indexOf("## Full Reflection"),
+  );
+});
+
+test("buildWorkflowResultMarkdown strips engine meta noise and tables transit rows", () => {
+  const result: WorkflowExecutionResult = {
+    workflowId: "daily-practice",
+    totalTimeMs: 22.6,
+    timestamp: "2026-05-08T03:44:34.559Z",
+    synthesis: {
+      witness_layer: {
+        summary: "A focused day.",
+      },
+    },
+    engineOutputs: {
+      transits: {
+        engineId: "transits",
+        witnessPrompt:
+          "With Pluto, Rahu retrograde, the energy turns inward. What internal review is being called for?",
+        witnessLayer: {
+          response:
+            "With Pluto, Rahu retrograde, the energy turns inward. What internal review is being called for?",
+          aletheios: {
+            agent: "aletheios",
+            perspective: "The external weather line is demanding review.",
+            domains_consulted: ["lorenz-kundli", "bioelectric"],
+            confidence: 0.8,
+            pattern_note: "",
+          },
+          pichet: {
+            agent: "pichet",
+            perspective: "Keep the body quiet enough to register the pressure.",
+            domains_consulted: ["lorenz-kundli"],
+            confidence: 0.8,
+            somatic_note: "",
+          },
+          routing_mode: "dyad-synthesis",
+          promo_label: "Enterprise Promo",
+        },
+        result: {
+          period_quality: "Favorable",
+          retrograde_planets: ["Pluto", "Rahu"],
+          sade_sati: {
+            is_active: false,
+          },
+          aspects: [
+            {
+              transiting_planet: "Sun",
+              aspect_type: "Opposition",
+              natal_planet: "Pluto",
+              orb: 0.54,
+              nature: "Challenging",
+            },
+            {
+              transiting_planet: "Neptune",
+              aspect_type: "Opposition",
+              natal_planet: "Moon",
+              orb: 0.56,
+              nature: "Challenging",
+            },
+          ],
+          transit_positions: [
+            {
+              planet: "Sun",
+              sign: "Aries",
+              degree_in_sign: 23.35,
+              speed: 0.9676,
+              is_retrograde: false,
+            },
+            {
+              planet: "Pluto",
+              sign: "Capricorn",
+              degree_in_sign: 11.28,
+              speed: -0.0007,
+              is_retrograde: true,
+            },
+          ],
+          natal_positions: [
+            {
+              planet: "Sun",
+              sign: "Cancer",
+              degree_in_sign: 26.35,
+              is_retrograde: false,
+            },
+          ],
+        },
+        metadata: {
+          calculation_time_ms: 1.9,
+        },
+        raw: {},
+      },
+    },
+    raw: {
+      workflow_id: "daily-practice",
+    },
+  };
+
+  const markdown = buildWorkflowResultMarkdown("Daily Practice Result", result);
+
+  assert.match(markdown, /\| Transit \| Aspect \| Natal \| Orb \| Nature \|/);
+  assert.match(
+    markdown,
+    /\| Sun \| Opposition \| Pluto \| 0\.54° \| Challenging \|/,
+  );
+  assert.match(markdown, /\| Planet \| Sign \| Degree \| Speed \| Motion \|/);
+  assert.match(markdown, /### Witness Layer/);
+  assert.match(
+    markdown,
+    /- Perspective: The external weather line is demanding review\./,
+  );
+  assert.doesNotMatch(markdown, /Domains Consulted/);
+  assert.doesNotMatch(markdown, /Confidence/);
+  assert.doesNotMatch(markdown, /Promo Label/);
+  assert.doesNotMatch(
+    markdown,
+    /With Pluto, Rahu retrograde, the energy turns inward\./,
+  );
 });
 
 test("buildReadingResultMarkdown reuses the interpreted presenter for cached readings", () => {

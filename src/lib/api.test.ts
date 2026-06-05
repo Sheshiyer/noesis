@@ -455,13 +455,13 @@ test("calculateEngine prefers witness dyad response on the default route", async
           witness_layer: {
             response:
               "Your body is ready. Bring that readiness into one concrete act.",
-            synthesis:
-              "Action is available, but it needs conscious direction.",
+            synthesis: "Action is available, but it needs conscious direction.",
             aletheios: {
               perspective: "Your momentum is real.",
             },
             pichet: {
-              perspective: "Choose one honest action instead of three impulses.",
+              perspective:
+                "Choose one honest action instead of three impulses.",
             },
           },
           metadata: { calculation_time_ms: 11.2 },
@@ -763,20 +763,141 @@ test("executeWorkflow preserves witness dyad fields on the default route", async
       "Your body can carry more truth than your mind is admitting.",
     );
     assert.deepEqual(result.engineOutputs.biorhythm?.witnessLayer, {
-      response:
-        "Your body can carry more truth than your mind is admitting.",
+      response: "Your body can carry more truth than your mind is admitting.",
       synthesis: "Let the physical surplus steady the emotional field.",
     });
     assert.deepEqual(result.synthesis.witness_layer, {
       response:
         "You do not need a bigger plan today. You need one honest action.",
-      synthesis:
-        "Resolve the inner split by acting on what is already clear.",
+      synthesis: "Resolve the inner split by acting on what is already clear.",
       pichet: {
         perspective: "Keep it concrete.",
       },
     });
     assert.equal(result.route?.target, "witness");
+  });
+});
+
+test("executeWorkflow preserves richer workflow contract fields when present", async () => {
+  await withExecutionRoute("witness", async () => {
+    const fetchStub = (async () => {
+      return new Response(
+        JSON.stringify({
+          workflow_id: "daily-practice",
+          reading_id: "reading-42",
+          created_at: "2026-05-08T00:22:16.559619348Z",
+          subject: "Evening integration through disciplined closure.",
+          evidence: ["transits", "vedic-clock"],
+          report: {
+            opening_response:
+              "The richer workflow report should lead the page when it is present.",
+            run_brief: {
+              route: "Witness Gateway",
+            },
+          },
+          engine_outputs: {
+            biorhythm: {
+              result: {
+                overall_energy: 84,
+              },
+            },
+          },
+          synthesis: {
+            summary: "A reflective and disciplined day.",
+          },
+          witness_layer: {
+            response: "Fallback witness text.",
+          },
+          total_time_ms: 19.4,
+          timestamp: "2026-05-08T00:22:16.559619348Z",
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await executeWorkflow(
+      {
+        baseUrl: "https://selemene.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "daily-practice",
+      {
+        birthData: {
+          date: "1991-08-24",
+          timezone: "Asia/Kolkata",
+        },
+      },
+      fetchStub,
+    );
+
+    assert.equal(result.readingId, "reading-42");
+    assert.equal(result.createdAt, "2026-05-08T00:22:16.559619348Z");
+    assert.equal(
+      result.subject,
+      "Evening integration through disciplined closure.",
+    );
+    assert.deepEqual(result.evidence, ["transits", "vedic-clock"]);
+    assert.deepEqual(result.report, {
+      opening_response:
+        "The richer workflow report should lead the page when it is present.",
+      run_brief: {
+        route: "Witness Gateway",
+      },
+    });
+    assert.equal(result.timestamp, "2026-05-08T00:22:16.559619348Z");
+    assert.equal(result.route?.target, "witness");
+  });
+});
+
+test("executeWorkflow preserves structured workflow subject payloads", async () => {
+  await withExecutionRoute("witness", async () => {
+    const fetchStub = (async () => {
+      return new Response(
+        JSON.stringify({
+          workflow_id: "daily-practice",
+          reading_id: "reading-43",
+          created_at: "2026-05-08T03:32:07.413Z",
+          subject: {
+            birth_date: "1991-08-13",
+            birth_time: "13:19",
+            timezone: "Asia/Kolkata",
+            latitude: 12.9716,
+            longitude: 77.5946,
+          },
+          engine_outputs: {},
+          synthesis: {},
+          total_time_ms: 12.1,
+        }),
+        { status: 200 },
+      );
+    }) as typeof fetch;
+
+    const result = await executeWorkflow(
+      {
+        baseUrl: "https://48.tryambakam.space",
+        apiKey: "nk_test_key",
+      },
+      "daily-practice",
+      {
+        birthData: {
+          date: "1991-08-13",
+          time: "13:19",
+          timezone: "Asia/Kolkata",
+          latitude: 12.9716,
+          longitude: 77.5946,
+        },
+      },
+      fetchStub,
+    );
+
+    assert.deepEqual(result.subject, {
+      birth_date: "1991-08-13",
+      birth_time: "13:19",
+      timezone: "Asia/Kolkata",
+      latitude: 12.9716,
+      longitude: 77.5946,
+    });
+    assert.equal(result.timestamp, "2026-05-08T03:32:07.413Z");
   });
 });
 

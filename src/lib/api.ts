@@ -872,6 +872,7 @@ function toWorkflowExecutionResult(
   payload: Record<string, unknown>,
   route?: ExecutionRouteInfo,
 ): WorkflowExecutionResult {
+  const report = asRecord(payload.report);
   const rawOutputs =
     withEngineOutputsRecord(asRecord(payload.engine_outputs)) ??
     withEngineOutputsRecord(asRecord(payload.engine_results)) ??
@@ -891,15 +892,22 @@ function toWorkflowExecutionResult(
 
   return {
     workflowId: readString(payload, "workflow_id") ?? "unknown-workflow",
+    readingId: readString(payload, "reading_id"),
+    createdAt: readString(payload, "created_at"),
+    subject: payload.subject,
+    evidence: payload.evidence,
+    report: Object.keys(report).length > 0 ? report : undefined,
     engineOutputs,
     synthesis: {
+      ...(Object.keys(report).length > 0 ? { report } : {}),
       ...asRecord(payload.synthesis),
       ...("witness_layer" in payload
         ? { witness_layer: asRecord(payload.witness_layer) }
         : {}),
     },
     totalTimeMs: readNumber(payload, "total_time_ms"),
-    timestamp: readString(payload, "timestamp"),
+    timestamp:
+      readString(payload, "created_at") ?? readString(payload, "timestamp"),
     route,
     raw: payload,
   };

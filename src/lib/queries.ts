@@ -246,7 +246,9 @@ export async function syncMenuBarSnapshot(
 
   const failures = syncIssues.map((issue) => issue.message);
 
-  const nextInsights = remedyInsight ? [...successful, remedyInsight] : successful;
+  const nextInsights = remedyInsight
+    ? [...successful, remedyInsight]
+    : successful;
 
   if (nextInsights.length > 0) {
     repository.saveMenuBarInsights(nextInsights);
@@ -256,9 +258,7 @@ export async function syncMenuBarSnapshot(
     dashboard,
     insights: {
       ...mergedInsights,
-      ...(remedyInsight
-        ? mapMenuBarInsights([remedyInsight])
-        : {}),
+      ...(remedyInsight ? mapMenuBarInsights([remedyInsight]) : {}),
     },
     syncIssues,
     syncError: failures[0],

@@ -4,3 +4,13 @@ dist/
 *.log
 coverage/
 docs/screenshots-drafts/*.png
+
+# Local planning and release-prep artifacts kept out of the public Store PR.
+FINAL_STATUS.md
+FIX_SUMMARY.md
+tasks/
+docs/
+scripts/
+assets/icon-emoji.txt
+.codegraph/
+.cursor/

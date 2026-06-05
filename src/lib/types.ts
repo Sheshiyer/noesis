@@ -142,6 +142,11 @@ export interface EngineExecutionResult {
 
 export interface WorkflowExecutionResult {
   workflowId: string;
+  readingId?: string;
+  createdAt?: string;
+  subject?: unknown;
+  evidence?: unknown;
+  report?: Record<string, unknown>;
   engineOutputs: Record<string, EngineExecutionResult>;
   synthesis: Record<string, unknown>;
   totalTimeMs?: number;
@@ -232,9 +237,15 @@ export interface RemoteSnapshot {
   fetchedAt: string;
 }
 
-export type PulseModeKind = "vedicClock" | "biorhythm" | "vimshottari";
+export type PulseModeKind =
+  | "nadabrahman"
+  | "vedicClock"
+  | "biorhythm"
+  | "vimshottari";
 
-export type MenuBarInsightKind = PulseModeKind | "nadabrahman";
+export type SourcePulseModeKind = Exclude<PulseModeKind, "nadabrahman">;
+
+export type MenuBarInsightKind = PulseModeKind;
 
 export interface MenuBarInsightSnapshot {
   kind: MenuBarInsightKind;

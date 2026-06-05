@@ -40,7 +40,12 @@ export function buildDailyWitnessInitialValues(
 
 export function resolveDailyWitnessWorkflowId(
   snapshot: DashboardSnapshot | null,
+  overrideWorkflowId?: string,
 ): string {
+  if (overrideWorkflowId?.trim()) {
+    return overrideWorkflowId.trim();
+  }
+
   const configured = snapshot?.profile?.preferences.default_workflow;
   return typeof configured === "string" && configured.trim().length > 0
     ? configured.trim()

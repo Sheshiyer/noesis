@@ -9,9 +9,9 @@
 
 **Self-consciousness as technology. Body as medium. Breath as interface.**
 
-Tryambakam Noesis is a native Raycast field console for running Selemene readings, workflow syntheses, Daily Witness reflections, and pulse-aware menu bar insight without turning the experience into a browser dashboard. It is designed for two audiences at once: practitioners who want fast, readable access to what is active now, and reviewers or contributors who need a clear view of routing, caching, storage, and execution behavior.
+Tryambakam Noesis is a native Raycast ritual surface for pulse cadence, NadaBrahman remedies, Daily Witness, and guided practice flows. It keeps the full engine and workflow catalogs available, but it now leads with the current remedy, the source pulse inputs supporting it, and the next action to take instead of presenting the extension like a backend console.
 
-[Quick Start](./QUICKSTART.md) · [Store Submission Notes](./docs/store-submission.md) · [Changelog](./CHANGELOG.md) · [GitHub Repository](https://github.com/Sheshiyer/noesis)
+[Quick Start](./QUICKSTART.md) · [Changelog](./CHANGELOG.md) · [GitHub Repository](https://github.com/Sheshiyer/noesis)
 
 | Dashboard | Engine Console | Profile Defaults |
 | --- | --- | --- |
@@ -19,46 +19,48 @@ Tryambakam Noesis is a native Raycast field console for running Selemene reading
 
 ## Why This Surface Exists
 
-- Raycast is the operator layer. It should show the active pattern, the next action, and the readable outcome.
+- Raycast is the ritual layer. It should show the active pattern, the derived remedy, the next action, and the readable outcome.
 - Selemene is the computational layer. It calculates engine outputs, workflows, and reading history.
-- Witness is an optional execution route, not hidden magic. The extension makes that path explicit.
-- SQLite is a local memory layer for accessibility and continuity, not the source of truth.
+- Witness is the default execution route for user-facing ritual runs, not hidden magic.
+- SQLite is a local continuity layer for accessibility and cache resilience, not the source of truth.
 
 ## Highlights
 
-- Run individual engines, multi-engine workflows, and the Daily Witness flow from one native command surface.
-- Keep the current pulse in the menu bar while also mirroring the full pulse board inside Raycast detail views.
-- Read interpreted result pages first, with raw JSON available only through explicit copy and debug actions.
-- Route engine and workflow execution explicitly through `Selemene Direct` or `Witness Gateway`.
+- Put pulse cadence first, derive the current NadaBrahman remedy, and move from remedy into action.
+- Run `Daily Witness` as an overview-first one-tap ritual, with manual input edits kept as a secondary path.
+- Keep `Daily Practice` available as a separate quick ritual surface while preserving the full engine and workflow catalogs.
+- Use a dedicated `Developer Tools` command for routing, cache, usage, and sync diagnostics instead of mixing them into the main dashboard.
+- Read interpreted result pages first, with raw JSON retained through explicit copy actions for deeper inspection.
 - Store secrets in Raycast preferences and keep recent history in a local SQLite cache with minimized payloads by default.
-- Surface partial refresh failures as structured sync issues instead of silently degrading the UI.
 
 ## Command Surface
 
 | Command | What It Does |
 | --- | --- |
-| `Dashboard` | Central command center for service state, profile defaults, recent readings, pulse state, and navigation. |
+| `Dashboard` | Ritual-first dashboard with `Practice`, `Current Remedy`, `Pulse Inputs`, `Recommended Now`, and the full engine and flow libraries. |
 | `Engines` | Browse Selemene lenses by phase, inspect recent context, and run a new engine reading. |
 | `Workflows` | Browse workflow chains, review engine composition, and execute multi-engine runs. |
 | `Readings` | Review cached reading history with interpreted result pages and explicit payload copy actions. |
 | `Profile` | Maintain shared birth data, timezone, default precision, and default workflow preferences. |
-| `API Key` | Connect or rotate the Selemene key, warm the cache, and manage local account state safely. |
-| `Daily Witness` | Open the somatic witness flow backed by the shared witness workflow. |
-| `Pulse` | Show the current organ, biorhythm, or Vimshottari pulse in the menu bar and mirrored detail view. |
+| `API Key` | Connect or rotate the Noesis access key, warm the cache, and manage local account state safely. |
+| `Daily Witness` | Overview-first one-tap ritual flow backed by the configured shared workflow. |
+| `Daily Practice` | Run the fallback `daily-practice` workflow directly as a quick ritual surface. |
+| `Developer Tools` | Inspect connection, routing, cache, usage, and sync diagnostics outside the main dashboard flow. |
+| `Pulse & Remedy` | Show the current NadaBrahman remedy in the menu bar, falling back to source pulse inputs when needed. |
 
 ## Runtime Model
 
 ```mermaid
 flowchart LR
     A["Raycast Commands"] --> B["Shared Transport and Presenters"]
-    M["Menu Bar Pulse"] --> B
+    M["Menu Bar Pulse & Remedy"] --> B
     B --> C["Selemene Direct"]
     B --> D["Witness Gateway"]
     C --> E["Readable Result Views"]
     D --> E
     C --> F["Local SQLite Cache"]
     D --> F
-    F --> G["Dashboard, Browsers, History, Pulse Board"]
+    F --> G["Dashboard, Browsers, History, Developer Tools"]
 ```
 
 ## Privacy And Local Storage
@@ -79,7 +81,7 @@ The extension exposes the following preferences:
 - `executionRoute` - `Selemene Direct` or `Witness Gateway`
 - `readingHistoryLimit` - local SQLite history cap
 - `cacheRawPayloads` - opt-in raw JSON retention
-- `pulseMode` - menu bar title priority (`TCM Organ`, `Biorhythm`, or `Vimshottari`)
+- `pulseMode` - remedy fallback strategy (`NadaBrahman Default`, `TCM Organ`, `Biorhythm`, or `Vimshottari`)
 
 Default Selemene base URL:
 
@@ -89,8 +91,8 @@ Default Selemene base URL:
 
 1. Open `API Key` in Raycast.
 2. Add the Selemene API key, confirm the base URL if needed, and validate the connection.
-3. Leave execution routing on `Selemene Direct` unless you intentionally want the Witness gateway path.
-4. Open `Dashboard` to warm the cache and navigate into `Engines`, `Workflows`, `Readings`, `Daily Witness`, or `Pulse`.
+3. Leave execution routing on `Witness Gateway` unless you intentionally want the direct Selemene path for operator testing.
+4. Open `Dashboard` to warm the cache, inspect `Current Remedy`, and move into `Daily Witness`, `Daily Practice`, `Engines`, `Workflows`, or `Readings`.
 
 More setup detail lives in [QUICKSTART.md](./QUICKSTART.md).
 

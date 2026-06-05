@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getDashboardEngines, getDashboardWorkflows } from "./dashboard-catalog";
+import {
+  getDashboardEngines,
+  getDashboardWorkflows,
+} from "./dashboard-catalog";
 import { DashboardSnapshot } from "./types";
 
 function createSnapshot(

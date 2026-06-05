@@ -1,21 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Icon, MenuBarExtra, openExtensionPreferences } from "@raycast/api";
-import {
-  formatRelativeTime,
-  formatTimeUntil,
-  truncate,
-} from "./lib/formatters";
-import {
-  buildMenuBarTitle,
-  buildPulseSubtitle,
-  getPulseModeLabel,
-} from "./lib/menu-bar-insights";
+import { Icon, MenuBarExtra } from "@raycast/api";
+import { formatRelativeTime, truncate } from "./lib/formatters";
+import { buildMenuBarTitle, buildPulseSubtitle } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
 import { readMenuBarSnapshot, syncMenuBarSnapshot } from "./lib/queries";
-import {
-  getExecutionRoutePreference,
-  getPulseModePreference,
-} from "./lib/settings";
+import { getPulseModePreference } from "./lib/settings";
 import { MenuBarSnapshot } from "./lib/types";
 
 export default function MenuBar() {
@@ -46,11 +35,13 @@ export default function MenuBar() {
   const dashboard = snapshot?.dashboard ?? null;
   const insights = snapshot?.insights ?? {};
   const pulseMode = getPulseModePreference();
-  const executionRoute = getExecutionRoutePreference();
   const title = dashboard
     ? buildMenuBarTitle(dashboard, insights, pulseMode, error)
     : "Pulse";
-  const pulseSubtitle = buildPulseSubtitle(insights);
+  const pulseSubtitle = buildPulseSubtitle(insights, pulseMode);
+  const remedyTitle =
+    insights.nadabrahman?.title ?? getRemedyFallbackTitle(dashboard);
+  const remedyWindow = insights.nadabrahman?.subtitle;
 
   return (
     <MenuBarExtra icon="icon.png" title={title}>
@@ -69,234 +60,110 @@ export default function MenuBar() {
         </>
       ) : null}
 
-      {insights.vedicClock ? (
-        <>
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Organ", insights.vedicClock.title)}
-            icon={Icon.Clock}
-          />
-          {insights.vedicClock.subtitle ? (
-            <MenuBarExtra.Item
-              title={formatMenuBarLine("Window", insights.vedicClock.subtitle)}
-            />
-          ) : null}
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Focus", insights.vedicClock.summary, 72)}
-          />
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Next Refresh",
-              formatTimeUntil(insights.vedicClock.refreshAfter),
-              36,
-            )}
-          />
-          <MenuBarExtra.Separator />
-        </>
-      ) : null}
-
-      {insights.biorhythm ? (
-        <>
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Biorhythm", insights.biorhythm.title)}
-            icon={Icon.Heartbeat}
-          />
-          {insights.biorhythm.subtitle ? (
-            <MenuBarExtra.Item
-              title={formatMenuBarLine(
-                "Dominant",
-                insights.biorhythm.subtitle,
-                68,
-              )}
-            />
-          ) : null}
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Cycles", insights.biorhythm.summary, 72)}
-          />
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Cached",
-              formatRelativeTime(insights.biorhythm.fetchedAt),
-              32,
-            )}
-          />
-          <MenuBarExtra.Separator />
-        </>
-      ) : dashboard?.profile?.birthDate ? null : dashboard ? (
-        <>
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Profile",
-              "Add birth data for personal pulse",
-              56,
-            )}
-            icon={Icon.PersonCircle}
-          />
-          <MenuBarExtra.Separator />
-        </>
-      ) : null}
-
-      {insights.vimshottari ? (
-        <>
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Vimshottari", insights.vimshottari.title)}
-            icon={Icon.Stars}
-          />
-          {insights.vimshottari.subtitle ? (
-            <MenuBarExtra.Item
-              title={formatMenuBarLine(
-                "Next",
-                insights.vimshottari.subtitle,
-                68,
-              )}
-            />
-          ) : null}
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Dasha", insights.vimshottari.summary, 72)}
-          />
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Cached",
-              formatRelativeTime(insights.vimshottari.fetchedAt),
-              32,
-            )}
-          />
-          <MenuBarExtra.Separator />
-        </>
-      ) : null}
-
-      {insights.nadabrahman ? (
-        <>
-          <MenuBarExtra.Item
-            title={formatMenuBarLine("Remedy", insights.nadabrahman.title)}
-            icon={Icon.Music}
-          />
-          {insights.nadabrahman.subtitle ? (
-            <MenuBarExtra.Item
-              title={formatMenuBarLine(
-                "Window",
-                insights.nadabrahman.subtitle,
-                68,
-              )}
-            />
-          ) : null}
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Nada",
-              insights.nadabrahman.summary,
-              72,
-            )}
-          />
-          <MenuBarExtra.Item
-            title={formatMenuBarLine(
-              "Cached",
-              formatRelativeTime(insights.nadabrahman.fetchedAt),
-              32,
-            )}
-          />
-          <MenuBarExtra.Separator />
-        </>
+      <MenuBarExtra.Item
+        title={formatMenuBarLine("Current Remedy", remedyTitle, 72)}
+        icon={Icon.Music}
+      />
+      {remedyWindow ? (
+        <MenuBarExtra.Item
+          title={formatMenuBarLine("Window", remedyWindow, 72)}
+        />
       ) : null}
 
       {pulseSubtitle ? (
         <MenuBarExtra.Item
-          title={formatMenuBarLine("Board", pulseSubtitle, 72)}
+          title={formatMenuBarLine("Summary", pulseSubtitle, 72)}
           icon={Icon.AlignLeft}
         />
       ) : null}
-      {dashboard?.timestamps.lastSyncAt ? (
+      {insights.nadabrahman?.fetchedAt ? (
         <MenuBarExtra.Item
           title={formatMenuBarLine(
-            "Last Sync",
-            formatRelativeTime(dashboard.timestamps.lastSyncAt),
+            "Cached",
+            formatRelativeTime(insights.nadabrahman.fetchedAt),
             36,
           )}
         />
       ) : null}
 
       <MenuBarExtra.Separator />
+      <MenuBarExtra.Item title="Why This Remedy" icon={Icon.AlignLeft} />
+      <MenuBarExtra.Item
+        title={formatMenuBarLine(
+          "TCM Organ",
+          formatPulseInputLine(
+            insights.vedicClock?.title,
+            insights.vedicClock?.summary,
+            getPulseInputFallback("vedicClock", dashboard),
+          ),
+          72,
+        )}
+        icon={Icon.Clock}
+      />
+      <MenuBarExtra.Item
+        title={formatMenuBarLine(
+          "Biorhythm",
+          formatPulseInputLine(
+            insights.biorhythm?.title,
+            insights.biorhythm?.summary,
+            getPulseInputFallback("biorhythm", dashboard),
+          ),
+          72,
+        )}
+        icon={Icon.Heartbeat}
+      />
+      <MenuBarExtra.Item
+        title={formatMenuBarLine(
+          "Vimshottari",
+          formatPulseInputLine(
+            insights.vimshottari?.title,
+            insights.vimshottari?.summary,
+            getPulseInputFallback("vimshottari", dashboard),
+          ),
+          72,
+        )}
+        icon={Icon.Stars}
+      />
+
+      <MenuBarExtra.Separator />
+      <MenuBarExtra.Item
+        title="Run Daily Witness"
+        icon={Icon.Eye}
+        onAction={() => openCommand("daily-witness")}
+      />
+      <MenuBarExtra.Item
+        title="Run Daily Practice"
+        icon={Icon.Play}
+        onAction={() => openCommand("daily-practice")}
+      />
+      <MenuBarExtra.Item
+        title="Refresh Pulse"
+        icon={Icon.ArrowClockwise}
+        onAction={() => void load(true)}
+      />
       <MenuBarExtra.Item
         title="Open Dashboard"
         icon={Icon.AppWindow}
         onAction={() => openCommand("dashboard")}
       />
-      <MenuBarExtra.Item
-        title="Open Readings"
-        icon={Icon.Book}
-        onAction={() => openCommand("readings")}
-      />
-      <MenuBarExtra.Item
-        title="Refresh Pulse Now"
-        icon={Icon.ArrowClockwise}
-        onAction={() => void load(true)}
-      />
-      <MenuBarExtra.Item
-        title="Edit Profile"
-        icon={Icon.Pencil}
-        onAction={() => openCommand("profile")}
-      />
-      <MenuBarExtra.Item
-        title="Open Engines"
-        icon={Icon.Gauge}
-        onAction={() => openCommand("engines")}
-      />
-      <MenuBarExtra.Item
-        title="Open Workflows"
-        icon={Icon.Network}
-        onAction={() => openCommand("workflows")}
-      />
 
       <MenuBarExtra.Separator />
-      <MenuBarExtra.Item title="Developer Tools" icon={Icon.Hammer} />
-      {dashboard ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine(
-            "Cache",
-            dashboard.cacheState.toUpperCase(),
-            28,
-          )}
-          icon={Icon.Circle}
-        />
-      ) : null}
-      <MenuBarExtra.Item
-        title={formatMenuBarLine("Title Mode", getPulseModeLabel(pulseMode), 42)}
-        icon={Icon.Text}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Route",
-          executionRoute === "witness" ? "Witness Gateway" : "Selemene Direct",
-          44,
-        )}
-        icon={Icon.Globe}
-      />
       {dashboard?.syncError ? (
         <MenuBarExtra.Item
-          title={formatMenuBarLine("Snapshot", dashboard.syncError, 72)}
+          title={formatMenuBarLine("Fatal", dashboard.syncError, 72)}
           icon={Icon.ExclamationMark}
         />
       ) : null}
-      {dashboard?.syncIssues.slice(1, 3).map((issue) => (
-        <MenuBarExtra.Item
-          key={`${issue.target}-${issue.resource}`}
-          title={formatMenuBarLine(issue.resource, issue.message, 72)}
-          icon={Icon.ExclamationMark}
-        />
-      ))}
       {error ? (
         <MenuBarExtra.Item
-          title={formatMenuBarLine("Pulse", error, 72)}
+          title={formatMenuBarLine("Fatal", error, 72)}
           icon={Icon.ExclamationMark}
         />
       ) : null}
       <MenuBarExtra.Item
-        title="Edit Access Key"
-        icon={Icon.Key}
-        onAction={() => openCommand("api-key")}
-      />
-      <MenuBarExtra.Item
-        title="Open Extension Preferences"
-        icon={Icon.Gear}
-        onAction={openExtensionPreferences}
+        title="Open Developer Tools"
+        icon={Icon.Hammer}
+        onAction={() => openCommand("developer-tools")}
       />
     </MenuBarExtra>
   );
@@ -309,4 +176,41 @@ function formatMenuBarLine(
 ): string {
   const prefix = `${label} · `;
   return `${prefix}${truncate(value, Math.max(12, maxLength - prefix.length))}`;
+}
+
+function formatPulseInputLine(
+  title: string | undefined,
+  summary: string | undefined,
+  fallback: string,
+): string {
+  return title ?? summary ?? fallback;
+}
+
+function getRemedyFallbackTitle(
+  snapshot: MenuBarSnapshot["dashboard"] | null,
+): string {
+  if (!snapshot?.hasCredentials && snapshot?.source === "empty") {
+    return "Connect Noesis to derive remedy";
+  }
+
+  if (!snapshot?.profile?.birthDate) {
+    return "Add profile context for remedy";
+  }
+
+  return "Waiting on pulse cadence";
+}
+
+function getPulseInputFallback(
+  kind: "vedicClock" | "biorhythm" | "vimshottari",
+  snapshot: MenuBarSnapshot["dashboard"] | null,
+): string {
+  if (!snapshot?.hasCredentials && snapshot?.source === "empty") {
+    return "Connect Noesis to warm this input";
+  }
+
+  if (kind !== "vedicClock" && !snapshot?.profile?.birthDate) {
+    return "Add profile context";
+  }
+
+  return "Refresh pulse";
 }
