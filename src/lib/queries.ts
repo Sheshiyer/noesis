@@ -139,20 +139,18 @@ export async function syncDashboardSnapshot(
   }
 }
 
-export async function syncMenuBarInsights(
-  options: {
-    dashboard: DashboardSnapshot;
-    force?: boolean;
-    config: SelemeneClientConfig;
-    fetchImpl?: typeof fetch;
-    calculateEngine?: (
-      config: SelemeneClientConfig,
-      engineId: string,
-      input: EngineExecutionInput,
-      fetchImpl?: typeof fetch,
-    ) => Promise<EngineExecutionResult>;
-  },
-): Promise<{
+export async function syncMenuBarInsights(options: {
+  dashboard: DashboardSnapshot;
+  force?: boolean;
+  config: SelemeneClientConfig;
+  fetchImpl?: typeof fetch;
+  calculateEngine?: (
+    config: SelemeneClientConfig,
+    engineId: string,
+    input: EngineExecutionInput,
+    fetchImpl?: typeof fetch,
+  ) => Promise<EngineExecutionResult>;
+}): Promise<{
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>;
   syncIssues: SyncIssue[];
   syncError?: string;

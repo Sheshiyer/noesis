@@ -137,7 +137,9 @@ export default function Dashboard() {
         <List.Item
           title="Unable to load Tryambakam Noesis"
           subtitle={error}
-          actions={<NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction />}
+          actions={
+            <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction />
+          }
         />
       </List>
     );
@@ -181,7 +183,10 @@ export default function Dashboard() {
             subtitle={error ?? undefined}
             icon={{ source: Icon.ExclamationMark, tintColor: Color.Red }}
             actions={
-              <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction />
+              <NoesisActionPanel
+                onRefresh={handleRefresh}
+                hideDashboardAction
+              />
             }
           />
         </List.Section>
@@ -254,7 +259,10 @@ export default function Dashboard() {
                 />
               }
               actions={
-                <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
+                <NoesisActionPanel
+                  onRefresh={handleRefresh}
+                  hideDashboardAction
+                >
                   <Action.Push
                     title="Edit Profile Defaults"
                     icon={Icon.Pencil}
@@ -299,7 +307,10 @@ export default function Dashboard() {
                 />
               }
               actions={
-                <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
+                <NoesisActionPanel
+                  onRefresh={handleRefresh}
+                  hideDashboardAction
+                >
                   <Action.Push
                     title="Open Reading Archive"
                     icon={Icon.ArrowRightCircle}
@@ -713,7 +724,10 @@ export default function Dashboard() {
                     />
                   }
                   actions={
-                    <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
+                    <NoesisActionPanel
+                      onRefresh={handleRefresh}
+                      hideDashboardAction
+                    >
                       <Action.Push
                         title="Run Engine"
                         icon={Icon.Play}
@@ -784,7 +798,10 @@ export default function Dashboard() {
                     />
                   }
                   actions={
-                    <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
+                    <NoesisActionPanel
+                      onRefresh={handleRefresh}
+                      hideDashboardAction
+                    >
                       <Action.Push
                         title="Run Workflow"
                         icon={Icon.Play}
