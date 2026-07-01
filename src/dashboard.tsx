@@ -42,6 +42,7 @@ import {
 } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
 import { readMenuBarSnapshot } from "./lib/queries";
+import { shouldShowSyncError } from "./lib/sync-status";
 import { getPulseModePreference } from "./lib/settings";
 import { useDashboardSnapshot } from "./lib/use-dashboard-snapshot";
 import {
@@ -104,6 +105,7 @@ export default function Dashboard() {
   const dashboardWorkflows = snapshot ? getDashboardWorkflows(snapshot) : [];
   const pulseMode = getPulseModePreference();
   const selectedSourceKind = getSelectedSourcePulseKind(pulseMode);
+  const showSyncError = shouldShowSyncError(error, snapshot);
   const pulseBoardSnapshot = snapshot
     ? (menuBarSnapshot ?? {
         dashboard: snapshot,
@@ -130,6 +132,18 @@ export default function Dashboard() {
       navigationTitle="Tryambakam Noesis"
       searchBarPlaceholder="Search remedies, pulse inputs, engines, and flows"
     >
+      {showSyncError ? (
+        <List.Section title="Sync Status">
+          <List.Item
+            title="Unable to refresh from Selemene"
+            subtitle={error ?? undefined}
+            icon={{ source: Icon.ExclamationMark, tintColor: Color.Red }}
+            actions={
+              <NoesisActionPanel onRefresh={reload} hideDashboardAction />
+            }
+          />
+        </List.Section>
+      ) : null}
       {snapshot ? (
         <>
           <List.Section title="Practice">
