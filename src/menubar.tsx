@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { Icon, MenuBarExtra, Toast, showToast } from "@raycast/api";
+import { useCachedPromise } from "@raycast/utils";
 import { formatRelativeTime, truncate } from "./lib/formatters";
 import { buildMenuBarTitle, buildPulseSubtitle } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
-import {
-  readMenuBarSnapshot,
-  syncMenuBarSnapshot,
-  getCacheDatabasePath,
-} from "./lib/queries";
+import { syncMenuBarSnapshot, getCacheDatabasePath } from "./lib/queries";
 import { getPulseModePreference, getStoredConfig } from "./lib/settings";
 import { MenuBarSnapshot } from "./lib/types";
 
@@ -23,82 +20,72 @@ interface DiagnosticInfo {
 }
 
 export default function MenuBar() {
-  const [snapshot, setSnapshot] = useState<MenuBarSnapshot | null>(null);
-  const [error, setError] = useState<string | undefined>(undefined);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticInfo>({
-    configFound: false,
-    insightsCount: 0,
-    loadDurationMs: 0,
-    cachePath: getCacheDatabasePath(),
+  const {
+    data: snapshot,
+    isLoading,
+    error: loadError,
+    revalidate,
+  } = useCachedPromise(async () => syncMenuBarSnapshot({ force: false }), [], {
+    keepPreviousData: true,
   });
 
-  const load = useCallback(async (force = false) => {
-    const start = Date.now();
-    const cached = await readMenuBarSnapshot();
-    setSnapshot(cached);
-
-    let configFound = false;
-    let syncError: string | undefined;
-    let synced: MenuBarSnapshot | undefined;
-
-    try {
-      const config = await getStoredConfig();
-      configFound = config !== null;
-      synced = await syncMenuBarSnapshot({ force });
-      setSnapshot(synced);
-      syncError = synced.syncError;
-      setError(synced.syncError);
-    } catch (loadError) {
-      const message =
-        loadError instanceof Error
-          ? loadError.message
-          : "Unable to refresh Noesis pulse";
-      syncError = message;
-      setError(message);
-    }
-
-    const remedy = synced?.insights.nadabrahman ?? cached.insights.nadabrahman;
-    setDiagnostics({
-      configFound,
-      syncError,
-      insightsCount: Object.keys(synced?.insights ?? cached.insights).length,
+  const diagnostics = useMemo<DiagnosticInfo>(() => {
+    const remedy = snapshot?.insights.nadabrahman;
+    return {
+      configFound: snapshot?.dashboard.hasCredentials ?? false,
+      syncError:
+        snapshot?.syncError ??
+        (loadError instanceof Error ? loadError.message : undefined),
+      insightsCount: snapshot ? Object.keys(snapshot.insights).length : 0,
       remedyFetchedAt: remedy?.fetchedAt,
       remedyRefreshAfter: remedy?.refreshAfter,
-      loadDurationMs: Date.now() - start,
+      loadDurationMs: 0,
       cachePath: getCacheDatabasePath(),
-      lastLoadAt: new Date().toISOString(),
-    });
-
-    return synced ?? cached;
-  }, []);
+      lastLoadAt: remedy?.fetchedAt,
+    };
+  }, [snapshot, loadError]);
 
   const handleRefresh = useCallback(async () => {
     await showToast({
       title: "Refreshing Noesis pulse...",
       style: Toast.Style.Animated,
     });
-    const synced = await load(true);
-    const remedy = synced.insights.nadabrahman;
-    if (synced.syncError) {
+    try {
+      const config = await getStoredConfig();
+      if (!config) {
+        await showToast({
+          title: "No API key configured",
+          style: Toast.Style.Failure,
+        });
+        return;
+      }
+      const synced = await syncMenuBarSnapshot({ force: true });
+      await revalidate();
+      const remedy = synced.insights.nadabrahman;
+      if (synced.syncError) {
+        await showToast({
+          title: `Refresh failed: ${synced.syncError}`,
+          style: Toast.Style.Failure,
+        });
+      } else {
+        await showToast({
+          title: remedy ? `Refreshed ${remedy.title}` : "Pulse refreshed",
+          style: Toast.Style.Success,
+        });
+      }
+    } catch (error) {
       await showToast({
-        title: `Refresh failed: ${synced.syncError}`,
+        title: error instanceof Error ? error.message : "Pulse refresh failed",
         style: Toast.Style.Failure,
       });
-    } else {
-      await showToast({
-        title: remedy ? `Refreshed ${remedy.title}` : "Pulse refreshed",
-        style: Toast.Style.Success,
-      });
     }
-  }, [load]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  }, [revalidate]);
 
   const dashboard = snapshot?.dashboard ?? null;
   const insights = snapshot?.insights ?? {};
   const pulseMode = getPulseModePreference();
+  const error =
+    loadError instanceof Error ? loadError.message : snapshot?.syncError;
   const title = dashboard
     ? buildMenuBarTitle(dashboard, insights, pulseMode, error)
     : "Pulse";
@@ -108,9 +95,7 @@ export default function MenuBar() {
   const remedyWindow = insights.nadabrahman?.subtitle;
 
   return (
-    <MenuBarExtra icon="icon.png" title={title}>
-      {!snapshot ? <MenuBarExtra.Item title="Loading Noesis pulse..." /> : null}
-
+    <MenuBarExtra icon="icon.png" title={title} isLoading={isLoading}>
       {dashboard &&
       !dashboard.hasCredentials &&
       dashboard.source === "empty" ? (
