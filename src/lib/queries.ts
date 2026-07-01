@@ -35,6 +35,24 @@ const CACHE_TTL_MS = {
   readings: 5 * 60 * 1000,
 };
 
+const MENU_BAR_SYNC_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label: string,
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`${label} timed out after ${ms}ms`)),
+        ms,
+      ),
+    ),
+  ]);
+}
+
 export async function readDashboardSnapshot(): Promise<DashboardSnapshot> {
   const config = await getStoredConfig();
   const baseUrl =
@@ -170,11 +188,10 @@ export async function syncMenuBarInsights(options: {
   const routeTarget = getExecutionRoutePreference();
   const sourceSettled = await Promise.allSettled(
     plans.map(async (plan) => {
-      const result = await runEngine(
-        options.config,
-        plan.engineId,
-        plan.input,
-        options.fetchImpl,
+      const result = await withTimeout(
+        runEngine(options.config, plan.engineId, plan.input, options.fetchImpl),
+        MENU_BAR_SYNC_TIMEOUT_MS,
+        `Engine ${plan.engineId}`,
       );
       return buildMenuBarInsight(
         plan.kind,
@@ -225,11 +242,15 @@ export async function syncMenuBarInsights(options: {
   let remedyInsight;
   if (remedyPlan) {
     try {
-      const remedyResult = await runEngine(
-        options.config,
-        remedyPlan.engineId,
-        remedyPlan.input,
-        options.fetchImpl,
+      const remedyResult = await withTimeout(
+        runEngine(
+          options.config,
+          remedyPlan.engineId,
+          remedyPlan.input,
+          options.fetchImpl,
+        ),
+        MENU_BAR_SYNC_TIMEOUT_MS,
+        `Engine ${remedyPlan.engineId}`,
       );
       remedyInsight = buildMenuBarInsight(
         remedyPlan.kind,
