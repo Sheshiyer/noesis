@@ -1,49 +1,55 @@
-import React, { useCallback, useMemo } from "react";
-import { Icon, MenuBarExtra, Toast, showToast } from "@raycast/api";
+import React, { useCallback, useState } from "react";
+import {
+  Clipboard,
+  Icon,
+  MenuBarExtra,
+  Toast,
+  open,
+  showToast,
+} from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { formatRelativeTime, truncate } from "./lib/formatters";
 import { buildMenuBarTitle, buildPulseSubtitle } from "./lib/menu-bar-insights";
+import {
+  clearMenuBarLog,
+  getMenuBarLogPath,
+  logMenuBar,
+} from "./lib/menu-bar-log";
+import { clearMenuBarCache, loadMenuBarState } from "./lib/menu-bar-state";
 import { openCommand } from "./lib/navigation";
-import { syncMenuBarSnapshot, getCacheDatabasePath } from "./lib/queries";
-import { getPulseModePreference, getStoredConfig } from "./lib/settings";
-import { MenuBarSnapshot } from "./lib/types";
+import { getPulseModePreference } from "./lib/settings";
 
-interface DiagnosticInfo {
-  configFound: boolean;
-  syncError?: string;
-  insightsCount: number;
-  remedyFetchedAt?: string;
-  remedyRefreshAfter?: string;
-  loadDurationMs: number;
-  cachePath: string;
-  lastLoadAt?: string;
+function formatLine(
+  label: string,
+  value: string | undefined,
+  max: number,
+): string {
+  if (!value) return label;
+  return `${label}: ${truncate(value, max - label.length - 2)}`;
 }
 
 export default function MenuBar() {
+  const [refreshKey, setRefreshKey] = useState(0);
   const {
-    data: snapshot,
+    data: state,
     isLoading,
     error: loadError,
-    revalidate,
-  } = useCachedPromise(async () => syncMenuBarSnapshot({ force: false }), [], {
-    keepPreviousData: true,
-  });
-
-  const diagnostics = useMemo<DiagnosticInfo>(() => {
-    const remedy = snapshot?.insights.nadabrahman;
-    return {
-      configFound: snapshot?.dashboard.hasCredentials ?? false,
-      syncError:
-        snapshot?.syncError ??
-        (loadError instanceof Error ? loadError.message : undefined),
-      insightsCount: snapshot ? Object.keys(snapshot.insights).length : 0,
-      remedyFetchedAt: remedy?.fetchedAt,
-      remedyRefreshAfter: remedy?.refreshAfter,
-      loadDurationMs: 0,
-      cachePath: getCacheDatabasePath(),
-      lastLoadAt: remedy?.fetchedAt,
-    };
-  }, [snapshot, loadError]);
+  } = useCachedPromise(
+    async ({ key }: { key: number }) => {
+      clearMenuBarLog();
+      logMenuBar(`load triggered by key ${key}`);
+      const result = await loadMenuBarState({ force: false });
+      for (const line of result.logs) {
+        logMenuBar(line);
+      }
+      if (result.loadError) {
+        logMenuBar(`loadError: ${result.loadError}`);
+      }
+      return result;
+    },
+    [{ key: refreshKey }],
+    { keepPreviousData: true },
+  );
 
   const handleRefresh = useCallback(async () => {
     await showToast({
@@ -51,47 +57,79 @@ export default function MenuBar() {
       style: Toast.Style.Animated,
     });
     try {
-      const config = await getStoredConfig();
-      if (!config) {
+      clearMenuBarLog();
+      const result = await loadMenuBarState({ force: true });
+      for (const line of result.logs) {
+        logMenuBar(line);
+      }
+      if (result.loadError) {
+        logMenuBar(`loadError: ${result.loadError}`);
         await showToast({
-          title: "No API key configured",
+          title: result.loadError,
           style: Toast.Style.Failure,
         });
-        return;
-      }
-      const synced = await syncMenuBarSnapshot({ force: true });
-      await revalidate();
-      const remedy = synced.insights.nadabrahman;
-      if (synced.syncError) {
+      } else if (result.syncError) {
         await showToast({
-          title: `Refresh failed: ${synced.syncError}`,
+          title: `Refresh failed: ${result.syncError}`,
           style: Toast.Style.Failure,
         });
       } else {
         await showToast({
-          title: remedy ? `Refreshed ${remedy.title}` : "Pulse refreshed",
+          title: state?.insights.nadabrahman
+            ? `Refreshed ${state.insights.nadabrahman.title}`
+            : "Pulse refreshed",
           style: Toast.Style.Success,
         });
       }
+      setRefreshKey((k) => k + 1);
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logMenuBar(`handleRefresh error: ${message}`);
       await showToast({
-        title: error instanceof Error ? error.message : "Pulse refresh failed",
+        title: message,
         style: Toast.Style.Failure,
       });
     }
-  }, [revalidate]);
+  }, [state?.insights.nadabrahman]);
 
-  const dashboard = snapshot?.dashboard ?? null;
-  const insights = snapshot?.insights ?? {};
+  const handleClearCache = useCallback(async () => {
+    clearMenuBarCache();
+    setRefreshKey((k) => k + 1);
+    await showToast({
+      title: "Cache cleared",
+      style: Toast.Style.Success,
+    });
+  }, []);
+
+  const handleCopyDiagnostics = useCallback(async () => {
+    const remedy = state?.insights.nadabrahman;
+    const lines = [
+      `configFound: ${state?.configFound ?? false}`,
+      `loadError: ${state?.loadError ?? loadError?.message ?? "none"}`,
+      `syncError: ${state?.syncError ?? "none"}`,
+      `dashboardSource: ${state?.dashboard.source ?? "unknown"}`,
+      `dashboardCacheState: ${state?.dashboard.cacheState ?? "unknown"}`,
+      `insightsCount: ${state ? Object.keys(state.insights).length : 0}`,
+      `remedyFetchedAt: ${remedy?.fetchedAt ?? "none"}`,
+      `remedyRefreshAfter: ${remedy?.refreshAfter ?? "none"}`,
+      `logPath: ${getMenuBarLogPath()}`,
+    ];
+    await Clipboard.copy(lines.join("\n"));
+    await showToast({
+      title: "Diagnostics copied",
+      style: Toast.Style.Success,
+    });
+  }, [state, loadError]);
+
+  const dashboard = state?.dashboard;
+  const insights = state?.insights ?? {};
   const pulseMode = getPulseModePreference();
-  const error =
-    loadError instanceof Error ? loadError.message : snapshot?.syncError;
+  const error = state?.loadError ?? loadError?.message ?? state?.syncError;
   const title = dashboard
     ? buildMenuBarTitle(dashboard, insights, pulseMode, error)
     : "Pulse";
   const pulseSubtitle = buildPulseSubtitle(insights, pulseMode);
-  const remedyTitle =
-    insights.nadabrahman?.title ?? getRemedyFallbackTitle(dashboard);
+  const remedyTitle = insights.nadabrahman?.title ?? "No remedy";
   const remedyWindow = insights.nadabrahman?.subtitle;
 
   return (
@@ -110,24 +148,21 @@ export default function MenuBar() {
       ) : null}
 
       <MenuBarExtra.Item
-        title={formatMenuBarLine("Current Remedy", remedyTitle, 72)}
+        title={formatLine("Current Remedy", remedyTitle, 72)}
         icon={Icon.Music}
       />
       {remedyWindow ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine("Window", remedyWindow, 72)}
-        />
+        <MenuBarExtra.Item title={formatLine("Window", remedyWindow, 72)} />
       ) : null}
-
       {pulseSubtitle ? (
         <MenuBarExtra.Item
-          title={formatMenuBarLine("Summary", pulseSubtitle, 72)}
+          title={formatLine("Summary", pulseSubtitle, 72)}
           icon={Icon.AlignLeft}
         />
       ) : null}
       {insights.nadabrahman?.fetchedAt ? (
         <MenuBarExtra.Item
-          title={formatMenuBarLine(
+          title={formatLine(
             "Cached",
             formatRelativeTime(insights.nadabrahman.fetchedAt),
             36,
@@ -135,192 +170,43 @@ export default function MenuBar() {
         />
       ) : null}
 
-      <MenuBarExtra.Separator />
-      <MenuBarExtra.Item title="Why This Remedy" icon={Icon.AlignLeft} />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "TCM Organ",
-          formatPulseInputLine(
-            insights.vedicClock?.title,
-            insights.vedicClock?.summary,
-            getPulseInputFallback("vedicClock", dashboard),
-          ),
-          72,
-        )}
-        icon={Icon.Clock}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Biorhythm",
-          formatPulseInputLine(
-            insights.biorhythm?.title,
-            insights.biorhythm?.summary,
-            getPulseInputFallback("biorhythm", dashboard),
-          ),
-          72,
-        )}
-        icon={Icon.Heartbeat}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Vimshottari",
-          formatPulseInputLine(
-            insights.vimshottari?.title,
-            insights.vimshottari?.summary,
-            getPulseInputFallback("vimshottari", dashboard),
-          ),
-          72,
-        )}
-        icon={Icon.Stars}
-      />
+      {error ? (
+        <>
+          <MenuBarExtra.Separator />
+          <MenuBarExtra.Item
+            title={formatLine("Error", error, 72)}
+            icon={Icon.ExclamationMark}
+          />
+        </>
+      ) : null}
 
       <MenuBarExtra.Separator />
-      <MenuBarExtra.Item
-        title="Run Daily Witness"
-        icon={Icon.Eye}
-        onAction={() => openCommand("daily-witness")}
-      />
-      <MenuBarExtra.Item
-        title="Run Daily Practice"
-        icon={Icon.Play}
-        onAction={() => openCommand("daily-practice")}
-      />
       <MenuBarExtra.Item
         title="Refresh Pulse"
         icon={Icon.ArrowClockwise}
         onAction={handleRefresh}
+        shortcut={{ modifiers: ["cmd"], key: "r" }}
+      />
+      <MenuBarExtra.Item
+        title="Clear Cache & Reload"
+        icon={Icon.Trash}
+        onAction={handleClearCache}
+      />
+      <MenuBarExtra.Item
+        title="Copy Diagnostics"
+        icon={Icon.Clipboard}
+        onAction={handleCopyDiagnostics}
       />
       <MenuBarExtra.Item
         title="Open Dashboard"
         icon={Icon.AppWindow}
         onAction={() => openCommand("dashboard")}
       />
-
-      <MenuBarExtra.Separator />
-      <MenuBarExtra.Item title="Diagnostics" icon={Icon.MagnifyingGlass} />
       <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "API Key",
-          diagnostics.configFound ? "found" : "missing",
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Sync Error",
-          diagnostics.syncError ?? "none",
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Insights Cached",
-          String(diagnostics.insightsCount),
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Remedy Fetched",
-          diagnostics.remedyFetchedAt
-            ? formatRelativeTime(diagnostics.remedyFetchedAt)
-            : "unknown",
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Remedy Refresh",
-          diagnostics.remedyRefreshAfter
-            ? formatRelativeTime(diagnostics.remedyRefreshAfter)
-            : "unknown",
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Last Load",
-          diagnostics.lastLoadAt
-            ? formatRelativeTime(diagnostics.lastLoadAt)
-            : "never",
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine(
-          "Load Time",
-          `${diagnostics.loadDurationMs}ms`,
-          72,
-        )}
-      />
-      <MenuBarExtra.Item
-        title={formatMenuBarLine("Cache", diagnostics.cachePath, 72)}
-      />
-
-      <MenuBarExtra.Separator />
-      {dashboard?.syncError ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine("Fatal", dashboard.syncError, 72)}
-          icon={Icon.ExclamationMark}
-        />
-      ) : null}
-      {error ? (
-        <MenuBarExtra.Item
-          title={formatMenuBarLine("Fatal", error, 72)}
-          icon={Icon.ExclamationMark}
-        />
-      ) : null}
-      <MenuBarExtra.Item
-        title="Open Developer Tools"
-        icon={Icon.Hammer}
-        onAction={() => openCommand("developer-tools")}
+        title="Open Noesis Menu Log"
+        icon={Icon.TextDocument}
+        onAction={() => open(getMenuBarLogPath())}
       />
     </MenuBarExtra>
   );
-}
-
-function formatMenuBarLine(
-  label: string,
-  value: string,
-  maxLength = 60,
-): string {
-  const prefix = `${label} · `;
-  return `${prefix}${truncate(value, Math.max(12, maxLength - prefix.length))}`;
-}
-
-function formatPulseInputLine(
-  title: string | undefined,
-  summary: string | undefined,
-  fallback: string,
-): string {
-  return title ?? summary ?? fallback;
-}
-
-function getRemedyFallbackTitle(
-  snapshot: MenuBarSnapshot["dashboard"] | null,
-): string {
-  if (!snapshot?.hasCredentials && snapshot?.source === "empty") {
-    return "Connect Noesis to derive remedy";
-  }
-
-  if (!snapshot?.profile?.birthDate) {
-    return "Add profile context for remedy";
-  }
-
-  return "Waiting on pulse cadence";
-}
-
-function getPulseInputFallback(
-  kind: "vedicClock" | "biorhythm" | "vimshottari",
-  snapshot: MenuBarSnapshot["dashboard"] | null,
-): string {
-  if (!snapshot?.hasCredentials && snapshot?.source === "empty") {
-    return "Connect Noesis to warm this input";
-  }
-
-  if (kind !== "vedicClock" && !snapshot?.profile?.birthDate) {
-    return "Add profile context";
-  }
-
-  return "Refresh pulse";
 }
