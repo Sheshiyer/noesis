@@ -120,13 +120,17 @@ export function formatRelativeTime(value?: string): string {
   return date.toLocaleString();
 }
 
-export function formatTimeUntil(value?: string): string {
+export function formatTimeUntil(
+  value?: string,
+  now: Date | number = Date.now(),
+): string {
   if (!value) {
     return "Unknown";
   }
 
   const date = new Date(value);
-  const diffMs = date.getTime() - Date.now();
+  const nowMs = typeof now === "number" ? now : now.getTime();
+  const diffMs = date.getTime() - nowMs;
 
   if (!Number.isFinite(diffMs)) {
     return value;

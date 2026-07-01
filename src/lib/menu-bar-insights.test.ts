@@ -296,7 +296,7 @@ test("buildPulseSubtitle prefers the remedy summary and keeps it glanceable", ()
       summary: "Solemn · Grief Processing, Acceptance, Depth",
       payload: {},
       fetchedAt: "2026-04-22T12:15:00Z",
-      refreshAfter: "2026-04-22T13:30:00.000Z",
+      refreshAfter: "2026-04-22T13:30:00Z",
     },
     vedicClock: {
       kind: "vedicClock",
@@ -305,7 +305,7 @@ test("buildPulseSubtitle prefers the remedy summary and keeps it glanceable", ()
       summary: "Restoration and stillness through deep internal repair",
       payload: {},
       fetchedAt: "2026-04-22T12:15:00Z",
-      refreshAfter: "2026-04-22T13:30:00.000Z",
+      refreshAfter: "2026-04-22T13:30:00Z",
     },
     biorhythm: {
       kind: "biorhythm",
@@ -314,7 +314,7 @@ test("buildPulseSubtitle prefers the remedy summary and keeps it glanceable", ()
       summary: "Physical 81% · Emotional 68% · Intellectual 67%",
       payload: {},
       fetchedAt: "2026-04-22T12:15:00Z",
-      refreshAfter: "2026-04-22T14:15:00.000Z",
+      refreshAfter: "2026-04-22T14:15:00Z",
     },
     vimshottari: {
       kind: "vimshottari",
@@ -324,9 +324,53 @@ test("buildPulseSubtitle prefers the remedy summary and keeps it glanceable", ()
         "Maha Sun · Antar Moon · Praty Mars with a long explanatory suffix",
       payload: {},
       fetchedAt: "2026-04-22T12:15:00Z",
-      refreshAfter: "2026-04-22T14:15:00.000Z",
+      refreshAfter: "2026-04-22T14:15:00Z",
     },
   });
 
   assert.ok(subtitle.length <= 72);
+});
+
+test("buildPulseSubtitle includes next refresh countdown", () => {
+  const now = new Date("2026-04-22T12:15:00Z");
+  const subtitle = buildPulseSubtitle(
+    {
+      nadabrahman: {
+        kind: "nadabrahman",
+        engineId: "nadabrahman",
+        title: "Natabhairavi",
+        summary: "Solemn · Grief Processing",
+        payload: {},
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T13:02:00Z",
+      },
+    },
+    "nadabrahman",
+    now,
+  );
+
+  assert.match(subtitle, /Solemn · Grief Processing/);
+  assert.match(subtitle, /refreshes in 47m/);
+  assert.ok(subtitle.length <= 72);
+});
+
+test("buildPulseSubtitle shows only countdown when no summary is available", () => {
+  const now = new Date("2026-04-22T12:15:00Z");
+  const subtitle = buildPulseSubtitle(
+    {
+      vedicClock: {
+        kind: "vedicClock",
+        engineId: "vedic-clock",
+        title: "Kidney · Kapha",
+        summary: "",
+        payload: {},
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-22T13:30:00Z",
+      },
+    },
+    "vedicClock",
+    now,
+  );
+
+  assert.equal(subtitle, "refreshes in 1h 15m");
 });

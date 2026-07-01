@@ -9,6 +9,7 @@ import {
   SourcePulseModeKind,
   UserProfileSnapshot,
 } from "./types";
+import { formatTimeUntil } from "./formatters";
 
 export const PERSONAL_INSIGHT_REFRESH_MS = 2 * 60 * 60 * 1000;
 const MENU_BAR_SOURCE_FALLBACK_ORDER: SourcePulseModeKind[] = [
@@ -214,16 +215,18 @@ export function buildMenuBarTitle(
 export function buildPulseSubtitle(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
   preferredKind: PulseModeKind = "nadabrahman",
+  now: Date = new Date(),
 ): string {
-  if (insights.nadabrahman?.summary) {
-    return shortenText(
-      insights.nadabrahman.summary,
-      MENU_BAR_SUBTITLE_MAX_LENGTH,
-    );
-  }
+  const summary = insights.nadabrahman?.summary
+    ? insights.nadabrahman.summary
+    : (getPreferredSourceInsight(insights, preferredKind)?.summary ?? "");
+  const nextRefresh = getEarliestRefreshAfter(insights, now);
+  const countdown = nextRefresh
+    ? `refreshes in ${formatTimeUntil(nextRefresh, now)}`
+    : "";
 
   return shortenText(
-    getPreferredSourceInsight(insights, preferredKind)?.summary ?? "",
+    [summary, countdown].filter(Boolean).join(" · "),
     MENU_BAR_SUBTITLE_MAX_LENGTH,
   );
 }
@@ -240,6 +243,23 @@ export function getPulseModeLabel(kind: MenuBarInsightKind): string {
     default:
       return "TCM Organ";
   }
+}
+
+function getEarliestRefreshAfter(
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
+  now: Date,
+): string | undefined {
+  const refreshTimes = Object.values(insights)
+    .map((insight) => (insight ? Date.parse(insight.refreshAfter) : Number.NaN))
+    .filter(
+      (value) => Number.isFinite(value) && value > now.getTime(),
+    ) as number[];
+
+  if (refreshTimes.length === 0) {
+    return undefined;
+  }
+
+  return new Date(Math.min(...refreshTimes)).toISOString();
 }
 
 function shouldRefreshInsight(
