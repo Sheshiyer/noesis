@@ -37,7 +37,7 @@ Tryambakam Noesis is a native Raycast ritual surface for pulse cadence, NadaBrah
 
 | Command | What It Does |
 | --- | --- |
-| `Dashboard` | Ritual-first dashboard with `Practice`, `Current Remedy`, `Pulse Inputs`, `Recommended Now`, and the full engine and flow libraries. |
+| `Dashboard` | Ritual-first dashboard with `Practice`, `Current Remedy`, `Pulse Inputs`, `Recommended Now`, and the full engine and flow libraries. Press **Refresh** to re-sync both the dashboard snapshot and the Current Remedy / Pulse Inputs. |
 | `Engines` | Browse Selemene lenses by phase, inspect recent context, and run a new engine reading. |
 | `Workflows` | Browse workflow chains, review engine composition, and execute multi-engine runs. |
 | `Readings` | Review cached reading history with interpreted result pages and explicit payload copy actions. |

@@ -1,3 +1,9 @@
+## [1.0.1] - 2026-06-30
+
+### Fixed
+- Dashboard now surfaces Selemene sync errors even when cached data is present.
+- Dashboard Refresh now also refreshes Current Remedy and Pulse Inputs by syncing menu-bar insights.
+
 ## [Initial Release] - 2026-06-05
 
 - Added Tryambakam Noesis as a Raycast-native ritual surface powered by the Selemene Engine and Witness gateway.
