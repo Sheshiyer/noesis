@@ -10,6 +10,10 @@ import {
 } from "./menu-bar-insights";
 import {
   DashboardSnapshot,
+  EngineExecutionInput,
+  EngineExecutionResult,
+  MenuBarInsightKind,
+  MenuBarInsightSnapshot,
   MenuBarSnapshot,
   SelemeneClientConfig,
   SyncIssue,
@@ -135,25 +139,31 @@ export async function syncDashboardSnapshot(
   }
 }
 
-export async function syncMenuBarSnapshot(
-  options: { force?: boolean } = {},
-): Promise<MenuBarSnapshot> {
+export async function syncMenuBarInsights(
+  options: {
+    dashboard: DashboardSnapshot;
+    force?: boolean;
+    config: SelemeneClientConfig;
+    fetchImpl?: typeof fetch;
+    calculateEngine?: (
+      config: SelemeneClientConfig,
+      engineId: string,
+      input: EngineExecutionInput,
+      fetchImpl?: typeof fetch,
+    ) => Promise<EngineExecutionResult>;
+  },
+): Promise<{
+  insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>;
+  syncIssues: SyncIssue[];
+  syncError?: string;
+}> {
+  const runEngine = options.calculateEngine ?? calculateEngine;
   const repository = getCacheRepository();
-  const dashboard = await syncDashboardSnapshot({ force: options.force });
   const cachedInsights = mapMenuBarInsights(repository.readMenuBarInsights());
-  const config = await getStoredConfig();
   const now = new Date();
 
-  if (!config) {
-    return {
-      dashboard,
-      insights: cachedInsights,
-      syncIssues: [],
-    };
-  }
-
   const plans = buildMenuBarInsightPlans(
-    dashboard,
+    options.dashboard,
     cachedInsights,
     now,
     options.force,
@@ -162,7 +172,12 @@ export async function syncMenuBarSnapshot(
   const routeTarget = getExecutionRoutePreference();
   const sourceSettled = await Promise.allSettled(
     plans.map(async (plan) => {
-      const result = await calculateEngine(config, plan.engineId, plan.input);
+      const result = await runEngine(
+        options.config,
+        plan.engineId,
+        plan.input,
+        options.fetchImpl,
+      );
       return buildMenuBarInsight(
         plan.kind,
         result,
@@ -202,7 +217,7 @@ export async function syncMenuBarSnapshot(
     ...mapMenuBarInsights(successful),
   };
   const remedyPlan = buildMenuBarRemedyPlan(
-    dashboard,
+    options.dashboard,
     mergedInsights,
     now,
     options.force,
@@ -212,10 +227,11 @@ export async function syncMenuBarSnapshot(
   let remedyInsight;
   if (remedyPlan) {
     try {
-      const remedyResult = await calculateEngine(
-        config,
+      const remedyResult = await runEngine(
+        options.config,
         remedyPlan.engineId,
         remedyPlan.input,
+        options.fetchImpl,
       );
       remedyInsight = buildMenuBarInsight(
         remedyPlan.kind,
@@ -237,15 +253,10 @@ export async function syncMenuBarSnapshot(
   }
 
   if (plans.length === 0 && !remedyPlan) {
-    return {
-      dashboard,
-      insights: cachedInsights,
-      syncIssues,
-    };
+    return { insights: cachedInsights, syncIssues };
   }
 
   const failures = syncIssues.map((issue) => issue.message);
-
   const nextInsights = remedyInsight
     ? [...successful, remedyInsight]
     : successful;
@@ -255,7 +266,6 @@ export async function syncMenuBarSnapshot(
   }
 
   return {
-    dashboard,
     insights: {
       ...mergedInsights,
       ...(remedyInsight ? mapMenuBarInsights([remedyInsight]) : {}),
@@ -263,6 +273,29 @@ export async function syncMenuBarSnapshot(
     syncIssues,
     syncError: failures[0],
   };
+}
+
+export async function syncMenuBarSnapshot(
+  options: { force?: boolean } = {},
+): Promise<MenuBarSnapshot> {
+  const dashboard = await syncDashboardSnapshot({ force: options.force });
+  const config = await getStoredConfig();
+
+  if (!config) {
+    return {
+      dashboard,
+      insights: mapMenuBarInsights(getCacheRepository().readMenuBarInsights()),
+      syncIssues: [],
+    };
+  }
+
+  const { insights, syncIssues, syncError } = await syncMenuBarInsights({
+    dashboard,
+    force: options.force,
+    config,
+  });
+
+  return { dashboard, insights, syncIssues, syncError };
 }
 
 export function getCacheDatabasePath(): string {
