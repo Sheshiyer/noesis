@@ -9,7 +9,7 @@ import { openCommand } from "../lib/navigation";
 
 interface NoesisActionPanelProps {
   children?: React.ReactNode;
-  onRefresh?: (force?: boolean) => Promise<void> | void;
+  onRefresh?: (force?: boolean) => Promise<unknown> | unknown;
   refreshTitle?: string;
   hideDashboardAction?: boolean;
 }

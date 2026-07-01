@@ -25,29 +25,34 @@ export function useDashboardSnapshot(
         setIsLoading(true);
       }
 
+      let result: DashboardSnapshot | undefined;
+
       if (!force) {
         const cached = await readDashboardSnapshot();
+        result = cached;
         setSnapshot((current) => current ?? cached);
       }
 
       if (!syncOnMount && !force) {
         setIsLoading(false);
-        return;
+        return result!;
       }
 
       try {
-        const synced = await syncDashboardSnapshot({ force });
-        setSnapshot(synced);
+        result = await syncDashboardSnapshot({ force });
+        setSnapshot(result);
         setError(null);
       } catch (loadError) {
         setError(
           loadError instanceof Error ? loadError.message : "Unknown error",
         );
-        const cached = await readDashboardSnapshot();
-        setSnapshot(cached);
+        result = await readDashboardSnapshot();
+        setSnapshot(result);
       } finally {
         setIsLoading(false);
       }
+
+      return result;
     },
     [snapshot, syncOnMount],
   );

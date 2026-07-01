@@ -625,7 +625,7 @@ function BrowserErrorList({
 }: {
   title: string;
   message: string;
-  onRefresh: (force?: boolean) => Promise<void> | void;
+  onRefresh: (force?: boolean) => Promise<unknown> | unknown;
 }) {
   return (
     <List navigationTitle="Tryambakam Noesis">

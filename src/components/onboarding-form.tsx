@@ -33,7 +33,7 @@ interface OnboardingValues {
 }
 
 interface OnboardingFormProps {
-  onSaved?: () => Promise<void> | void;
+  onSaved?: () => Promise<unknown> | unknown;
 }
 
 export function OnboardingForm(props: OnboardingFormProps) {

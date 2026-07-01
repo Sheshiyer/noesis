@@ -7,7 +7,7 @@ export default function ProfileCommand() {
   const { snapshot, isLoading, reload } = useDashboardSnapshot();
 
   if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => reload(true)} />;
+    return <OnboardingForm onSaved={async () => { await reload(true); }} />;
   }
 
   if (!snapshot && isLoading) {

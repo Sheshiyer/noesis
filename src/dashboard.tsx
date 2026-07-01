@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Action, Color, Icon, List } from "@raycast/api";
 import {
   EngineExecutionForm,
@@ -41,9 +41,9 @@ import {
   getSelectedSourcePulseKind,
 } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
-import { readMenuBarSnapshot } from "./lib/queries";
+import { readMenuBarSnapshot, syncMenuBarInsights } from "./lib/queries";
 import { shouldShowSyncError } from "./lib/sync-status";
-import { getPulseModePreference } from "./lib/settings";
+import { getPulseModePreference, getStoredConfig } from "./lib/settings";
 import { useDashboardSnapshot } from "./lib/use-dashboard-snapshot";
 import {
   DashboardSnapshot,
@@ -55,6 +55,48 @@ export default function Dashboard() {
   const { snapshot, isLoading, error, reload } = useDashboardSnapshot();
   const [menuBarSnapshot, setMenuBarSnapshot] =
     useState<MenuBarSnapshot | null>(null);
+
+  const handleRefresh = useCallback(
+    async (force = false) => {
+      const updatedSnapshot = await reload(force);
+      if (!updatedSnapshot) {
+        return;
+      }
+
+      const config = await getStoredConfig();
+      if (!config) {
+        try {
+          const cached = await readMenuBarSnapshot();
+          setMenuBarSnapshot(cached);
+        } catch {
+          setMenuBarSnapshot(null);
+        }
+        return;
+      }
+
+      try {
+        const result = await syncMenuBarInsights({
+          dashboard: updatedSnapshot,
+          force,
+          config,
+        });
+        setMenuBarSnapshot({
+          dashboard: updatedSnapshot,
+          insights: result.insights,
+          syncIssues: result.syncIssues,
+          syncError: result.syncError,
+        });
+      } catch {
+        try {
+          const cached = await readMenuBarSnapshot();
+          setMenuBarSnapshot(cached);
+        } catch {
+          setMenuBarSnapshot(null);
+        }
+      }
+    },
+    [reload],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -86,7 +128,7 @@ export default function Dashboard() {
   ]);
 
   if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => reload(true)} />;
+    return <OnboardingForm onSaved={() => handleRefresh(true)} />;
   }
 
   if (error && !snapshot) {
@@ -95,7 +137,7 @@ export default function Dashboard() {
         <List.Item
           title="Unable to load Tryambakam Noesis"
           subtitle={error}
-          actions={<NoesisActionPanel onRefresh={reload} hideDashboardAction />}
+          actions={<NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction />}
         />
       </List>
     );
@@ -139,7 +181,7 @@ export default function Dashboard() {
             subtitle={error ?? undefined}
             icon={{ source: Icon.ExclamationMark, tintColor: Color.Red }}
             actions={
-              <NoesisActionPanel onRefresh={reload} hideDashboardAction />
+              <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction />
             }
           />
         </List.Section>
@@ -212,7 +254,7 @@ export default function Dashboard() {
                 />
               }
               actions={
-                <NoesisActionPanel onRefresh={reload} hideDashboardAction>
+                <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
                   <Action.Push
                     title="Edit Profile Defaults"
                     icon={Icon.Pencil}
@@ -257,7 +299,7 @@ export default function Dashboard() {
                 />
               }
               actions={
-                <NoesisActionPanel onRefresh={reload} hideDashboardAction>
+                <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
                   <Action.Push
                     title="Open Reading Archive"
                     icon={Icon.ArrowRightCircle}
@@ -351,7 +393,7 @@ export default function Dashboard() {
               }
               actions={
                 <NoesisActionPanel
-                  onRefresh={reload}
+                  onRefresh={handleRefresh}
                   hideDashboardAction
                   refreshTitle="Refresh Pulse"
                 >
@@ -488,7 +530,7 @@ export default function Dashboard() {
                   }
                   actions={
                     <NoesisActionPanel
-                      onRefresh={reload}
+                      onRefresh={handleRefresh}
                       hideDashboardAction
                       refreshTitle="Refresh Pulse"
                     >
@@ -562,7 +604,7 @@ export default function Dashboard() {
                   }
                   actions={
                     <NoesisActionPanel
-                      onRefresh={reload}
+                      onRefresh={handleRefresh}
                       hideDashboardAction
                       refreshTitle="Refresh Pulse"
                     >
@@ -671,7 +713,7 @@ export default function Dashboard() {
                     />
                   }
                   actions={
-                    <NoesisActionPanel onRefresh={reload} hideDashboardAction>
+                    <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
                       <Action.Push
                         title="Run Engine"
                         icon={Icon.Play}
@@ -742,7 +784,7 @@ export default function Dashboard() {
                     />
                   }
                   actions={
-                    <NoesisActionPanel onRefresh={reload} hideDashboardAction>
+                    <NoesisActionPanel onRefresh={handleRefresh} hideDashboardAction>
                       <Action.Push
                         title="Run Workflow"
                         icon={Icon.Play}
