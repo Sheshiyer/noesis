@@ -117,10 +117,21 @@ export function buildMenuBarRemedyPlan(
     return undefined;
   }
 
+  const remedyOlderThanSources = SOURCE_PULSE_KINDS.some((kind) => {
+    const source = insights[kind];
+    const remedy = insights.nadabrahman;
+    return (
+      source &&
+      remedy &&
+      Date.parse(source.fetchedAt) > Date.parse(remedy.fetchedAt)
+    );
+  });
+
   if (
     !force &&
     !sourceUpdated &&
-    !shouldRefreshInsight(insights.nadabrahman, now)
+    !shouldRefreshInsight(insights.nadabrahman, now) &&
+    !remedyOlderThanSources
   ) {
     return undefined;
   }

@@ -140,6 +140,64 @@ test("buildMenuBarRemedyPlan derives a nadabrahman run from the cached pulse cad
   assert.equal(plan?.refreshAfterOverride, "2026-04-22T13:30:00.000Z");
 });
 
+test("buildMenuBarRemedyPlan schedules when source insights are newer than the remedy", () => {
+  const dashboard = createDashboardSnapshot();
+  const plan = buildMenuBarRemedyPlan(
+    dashboard,
+    {
+      vedicClock: {
+        kind: "vedicClock",
+        engineId: "vedic-clock",
+        title: "Kidney · Kapha",
+        subtitle: "5:00 PM - 7:00 PM · Water",
+        summary: "Restoration and stillness",
+        payload: {},
+        fetchedAt: "2026-04-23T12:15:00Z",
+        refreshAfter: "2026-04-23T13:30:00.000Z",
+      },
+      biorhythm: {
+        kind: "biorhythm",
+        engineId: "biorhythm",
+        title: "Energy 72%",
+        subtitle: "Physical Rising 81%",
+        summary: "Physical 81% · Emotional 68% · Intellectual 67%",
+        payload: {},
+        fetchedAt: "2026-04-23T12:15:00Z",
+        refreshAfter: "2026-04-23T14:15:00.000Z",
+      },
+      vimshottari: {
+        kind: "vimshottari",
+        engineId: "vimshottari",
+        title: "Sun > Moon > Mars",
+        subtitle: "Next antar in 3d",
+        summary: "Maha Sun · Antar Moon · Praty Mars",
+        payload: {},
+        fetchedAt: "2026-04-23T12:15:00Z",
+        refreshAfter: "2026-04-23T14:15:00.000Z",
+      },
+      nadabrahman: {
+        kind: "nadabrahman",
+        engineId: "nadabrahman",
+        title: "Some remedy",
+        subtitle: "Old remedy",
+        summary: "Old remedy",
+        payload: {},
+        fetchedAt: "2026-04-22T12:15:00Z",
+        refreshAfter: "2026-04-23T15:00:00.000Z",
+      },
+    },
+    new Date("2026-04-23T12:20:00Z"),
+    false,
+    false,
+  );
+
+  assert.ok(
+    plan,
+    "expected remedy plan to be scheduled because sources are newer",
+  );
+  assert.equal(plan?.engineId, "nadabrahman");
+});
+
 test("buildMenuBarInsight derives a vedic clock title and next boundary refresh", () => {
   const result: EngineExecutionResult = {
     engineId: "vedic-clock",
