@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Icon, MenuBarExtra } from "@raycast/api";
+import { Icon, MenuBarExtra, Toast, showToast } from "@raycast/api";
 import { formatRelativeTime, truncate } from "./lib/formatters";
 import { buildMenuBarTitle, buildPulseSubtitle } from "./lib/menu-bar-insights";
 import { openCommand } from "./lib/navigation";
@@ -19,14 +19,36 @@ export default function MenuBar() {
       const synced = await syncMenuBarSnapshot({ force });
       setSnapshot(synced);
       setError(synced.syncError);
+      return synced;
     } catch (loadError) {
-      setError(
+      const message =
         loadError instanceof Error
           ? loadError.message
-          : "Unable to refresh Noesis pulse",
-      );
+          : "Unable to refresh Noesis pulse";
+      setError(message);
+      throw loadError;
     }
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    await showToast({
+      title: "Refreshing Noesis pulse...",
+      style: Toast.Style.Animated,
+    });
+    try {
+      const synced = await load(true);
+      const remedy = synced.insights.nadabrahman;
+      await showToast({
+        title: remedy ? `Refreshed ${remedy.title}` : "Pulse refreshed",
+        style: Toast.Style.Success,
+      });
+    } catch {
+      await showToast({
+        title: "Pulse refresh failed",
+        style: Toast.Style.Failure,
+      });
+    }
+  }, [load]);
 
   useEffect(() => {
     void load();
@@ -139,7 +161,7 @@ export default function MenuBar() {
       <MenuBarExtra.Item
         title="Refresh Pulse"
         icon={Icon.ArrowClockwise}
-        onAction={() => void load(true)}
+        onAction={handleRefresh}
       />
       <MenuBarExtra.Item
         title="Open Dashboard"
