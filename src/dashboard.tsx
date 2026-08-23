@@ -1,5 +1,21 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Action, Color, Icon, List } from "@raycast/api";
+import { Action, Icon, List } from "@raycast/api";
+import {
+  COLOR_ERROR,
+  COLOR_INFO,
+  COLOR_SUCCESS,
+  COLOR_WARNING,
+  COLOR_SELECTED,
+  COLOR_SECONDARY,
+  cosmicHeader,
+  sacredSubheader,
+  SECTION_DIVIDER,
+  goldIcon,
+  emeraldIcon,
+  indigoIcon,
+  violetIcon,
+  mutedIcon,
+} from "./lib/design-tokens";
 import {
   EngineExecutionForm,
   WorkflowExecutionForm,
@@ -12,8 +28,8 @@ import {
   WorkflowDetailView,
   WorkflowsBrowser,
 } from "./components/noesis-browsers";
-import { OnboardingForm } from "./components/onboarding-form";
 import { ProfileForm } from "./components/profile-form";
+import { canUseEngineWorkbench, getSnapshotAccess } from "./lib/access";
 import {
   buildRecommendedNowItems,
   deriveContextQuality,
@@ -63,16 +79,10 @@ export default function Dashboard() {
         return;
       }
 
-      const config = await getStoredConfig();
-      if (!config) {
-        try {
-          const cached = await readMenuBarSnapshot();
-          setMenuBarSnapshot(cached);
-        } catch {
-          setMenuBarSnapshot(null);
-        }
-        return;
-      }
+      const config = (await getStoredConfig()) ?? {
+        baseUrl: updatedSnapshot.baseUrl,
+        apiKey: "",
+      };
 
       try {
         const result = await syncMenuBarInsights({
@@ -127,10 +137,6 @@ export default function Dashboard() {
     snapshot?.timestamps.readings,
   ]);
 
-  if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => handleRefresh(true)} />;
-  }
-
   if (error && !snapshot) {
     return (
       <List navigationTitle="Tryambakam Noesis">
@@ -147,6 +153,8 @@ export default function Dashboard() {
 
   const dashboardEngines = snapshot ? getDashboardEngines(snapshot) : [];
   const dashboardWorkflows = snapshot ? getDashboardWorkflows(snapshot) : [];
+  const access = getSnapshotAccess(snapshot);
+  const canUseWorkbench = canUseEngineWorkbench(snapshot);
   const pulseMode = getPulseModePreference();
   const selectedSourceKind = getSelectedSourcePulseKind(pulseMode);
   const showSyncError = shouldShowSyncError(error, snapshot);
@@ -174,14 +182,18 @@ export default function Dashboard() {
       isLoading={isLoading}
       isShowingDetail
       navigationTitle="Tryambakam Noesis"
-      searchBarPlaceholder="Search remedies, pulse inputs, engines, and flows"
+      searchBarPlaceholder={
+        canUseWorkbench
+          ? "Search remedies, pulse inputs, engines, and flows"
+          : "Search remedies, pulse inputs, and daily rituals"
+      }
     >
       {showSyncError ? (
-        <List.Section title="Sync Status">
+        <List.Section title={cosmicHeader("Sync Status")}>
           <List.Item
             title="Unable to refresh from Selemene"
             subtitle={error ?? undefined}
-            icon={{ source: Icon.ExclamationMark, tintColor: Color.Red }}
+            icon={{ source: Icon.ExclamationMark, tintColor: COLOR_ERROR }}
             actions={
               <NoesisActionPanel
                 onRefresh={handleRefresh}
@@ -193,14 +205,11 @@ export default function Dashboard() {
       ) : null}
       {snapshot ? (
         <>
-          <List.Section title="Practice">
+          <List.Section title={cosmicHeader("Practice")}>
             <List.Item
-              icon={{
-                source: Icon.PersonCircle,
-                tintColor: getContextQualityColor(contextQuality.status),
-              }}
+              icon={goldIcon(Icon.PersonCircle)}
               title={{
-                value: "Profile Defaults",
+                value: "Ritual Defaults",
                 tooltip:
                   snapshot.profile?.fullName ??
                   "Set shared birth data, timezone, and reusable ritual defaults.",
@@ -228,10 +237,13 @@ export default function Dashboard() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Profile Defaults",
+                    "# Ritual Defaults",
                     "",
-                    "Shared birth data and timezone shape every remedy, Daily Witness run, and ritual workflow in this extension.",
+                    "Shared birth data and timezone shape Daily Ritual, Pulse & Remedy, and operator workbench runs when access is connected.",
                     "",
+                    SECTION_DIVIDER,
+                    "",
+                    `- Access Mode: ${access.mode === "admin" ? "Operator" : "Witness"}`,
                     `- Context Quality: ${contextQuality.label}`,
                     `- Context Note: ${contextQuality.summary}`,
                     snapshot.profile
@@ -260,83 +272,86 @@ export default function Dashboard() {
               }
               actions={
                 <NoesisActionPanel
+                  snapshot={snapshot}
                   onRefresh={handleRefresh}
                   hideDashboardAction
                 >
                   <Action.Push
-                    title="Edit Profile Defaults"
-                    icon={Icon.Pencil}
+                    title="Edit Ritual Defaults"
+                    icon={goldIcon(Icon.Pencil)}
                     target={<ProfileForm snapshot={snapshot} />}
                   />
                   <Action
                     title="Open Profile Command"
-                    icon={Icon.AppWindowList}
+                    icon={mutedIcon(Icon.AppWindowList)}
                     onAction={() => openCommand("profile")}
                   />
                 </NoesisActionPanel>
               }
             />
-            <List.Item
-              icon={Icon.Book}
-              title={{
-                value: "Reading Archive",
-                tooltip:
-                  "Inspect previous readings, witness responses, and stored results.",
-              }}
-              keywords={["readings", "archive", "history", "results"]}
-              accessories={[
-                {
-                  text: formatCompactCount(snapshot.readings.length, "R"),
-                  tooltip: `${snapshot.readings.length} recent readings in local history`,
-                },
-                {
-                  text: formatRelativeTime(snapshot.timestamps.readings),
-                  tooltip: `Latest sync ${formatAbsoluteTime(snapshot.timestamps.readings)}`,
-                },
-              ]}
-              detail={
-                <List.Item.Detail
-                  markdown={[
-                    "# Reading Archive",
-                    "",
-                    "Return to previous readings, witness responses, and stored ritual outputs from earlier sessions.",
-                    "",
-                    `- ${formatCount(snapshot.readings.length, "recent reading")} in the local history window`,
-                    `- Latest sync landed ${formatRelativeTime(snapshot.timestamps.readings)}`,
-                  ].join("\n")}
-                />
-              }
-              actions={
-                <NoesisActionPanel
-                  onRefresh={handleRefresh}
-                  hideDashboardAction
-                >
-                  <Action.Push
-                    title="Open Reading Archive"
-                    icon={Icon.ArrowRightCircle}
-                    target={
-                      <ReadingsBrowser
-                        initialSnapshot={snapshot}
-                        syncOnMount={false}
-                      />
-                    }
+            {canUseWorkbench ? (
+              <List.Item
+                icon={goldIcon(Icon.Book)}
+                title={{
+                  value: "Reading Archive",
+                  tooltip:
+                    "Inspect previous readings, witness responses, and stored results.",
+                }}
+                keywords={["readings", "archive", "history", "results"]}
+                accessories={[
+                  {
+                    text: formatCompactCount(snapshot.readings.length, "R"),
+                    tooltip: `${snapshot.readings.length} recent readings in local history`,
+                  },
+                  {
+                    text: formatRelativeTime(snapshot.timestamps.readings),
+                    tooltip: `Latest sync ${formatAbsoluteTime(snapshot.timestamps.readings)}`,
+                  },
+                ]}
+                detail={
+                  <List.Item.Detail
+                    markdown={[
+                      "# Reading Archive",
+                      "",
+                      "Return to previous readings, witness responses, and stored ritual outputs from earlier sessions.",
+                      "",
+                      SECTION_DIVIDER,
+                      "",
+                      `- ${formatCount(snapshot.readings.length, "recent reading")} in the local history window`,
+                      `- Latest sync landed ${formatRelativeTime(snapshot.timestamps.readings)}`,
+                    ].join("\n")}
                   />
-                  <Action
-                    title="Open Readings Command"
-                    icon={Icon.AppWindowList}
-                    onAction={() => openCommand("readings")}
-                  />
-                </NoesisActionPanel>
-              }
-            />
+                }
+                actions={
+                  <NoesisActionPanel
+                    snapshot={snapshot}
+                    onRefresh={handleRefresh}
+                    hideDashboardAction
+                  >
+                    <Action.Push
+                      title="Open Reading Archive"
+                      icon={indigoIcon(Icon.ArrowRightCircle)}
+                      target={
+                        <ReadingsBrowser
+                          initialSnapshot={snapshot}
+                          syncOnMount={false}
+                        />
+                      }
+                    />
+                    <Action
+                      title="Open Readings Command"
+                      icon={mutedIcon(Icon.AppWindowList)}
+                      onAction={() => openCommand("readings")}
+                    />
+                  </NoesisActionPanel>
+                }
+              />
+            ) : null}
           </List.Section>
 
-          <List.Section title="Current Remedy">
+          <List.Section title={cosmicHeader("Current Remedy")}>
             <List.Item
-              icon={{
-                source: Icon.Music,
-                tintColor: Color.Blue,
-              }}
+              icon={indigoIcon(Icon.Music)}
               title={{
                 value: pulseRemedy?.title ?? getRemedyPendingTitle(snapshot),
                 tooltip: [
@@ -361,7 +376,7 @@ export default function Dashboard() {
                       ? "REMEDY"
                       : contextQuality.label.toUpperCase(),
                     color: pulseRemedy
-                      ? Color.Blue
+                      ? COLOR_INFO
                       : getContextQualityColor(contextQuality.status),
                   },
                 },
@@ -382,6 +397,8 @@ export default function Dashboard() {
                     pulseRemedy
                       ? "NadaBrahman is the primary outcome of the pulse cadence and currently leads the ritual surface."
                       : getRemedyPendingSummary(snapshot, contextQuality),
+                    "",
+                    SECTION_DIVIDER,
                     "",
                     pulseRemedy?.title
                       ? `- Current raga: ${pulseRemedy.title}`
@@ -404,24 +421,25 @@ export default function Dashboard() {
               }
               actions={
                 <NoesisActionPanel
+                  snapshot={snapshot}
                   onRefresh={handleRefresh}
                   hideDashboardAction
                   refreshTitle="Refresh Pulse"
                 >
                   <Action
                     title="Run Daily Witness"
-                    icon={Icon.Eye}
+                    icon={emeraldIcon(Icon.Eye)}
                     onAction={() => openCommand("daily-witness")}
                   />
                   <Action
                     title="Run Daily Practice"
-                    icon={Icon.Play}
+                    icon={goldIcon(Icon.Play)}
                     onAction={() => openCommand("daily-practice")}
                   />
-                  {pulseRemedyEngine ? (
+                  {canUseWorkbench && pulseRemedyEngine ? (
                     <Action.Push
                       title="Run Nadabrahman Remedy"
-                      icon={Icon.Music}
+                      icon={indigoIcon(Icon.Music)}
                       target={
                         <EngineExecutionForm
                           engine={pulseRemedyEngine}
@@ -430,10 +448,10 @@ export default function Dashboard() {
                       }
                     />
                   ) : null}
-                  {pulseRemedyEngine ? (
+                  {canUseWorkbench && pulseRemedyEngine ? (
                     <Action.Push
                       title="View Nadabrahman Engine"
-                      icon={Icon.ArrowRightCircle}
+                      icon={indigoIcon(Icon.ArrowRightCircle)}
                       target={
                         <EngineDetailView
                           engine={pulseRemedyEngine}
@@ -442,17 +460,12 @@ export default function Dashboard() {
                       }
                     />
                   ) : null}
-                  <Action
-                    title="Open Developer Tools"
-                    icon={Icon.Hammer}
-                    onAction={() => openCommand("developer-tools")}
-                  />
                 </NoesisActionPanel>
               }
             />
           </List.Section>
 
-          <List.Section title="Pulse Inputs">
+          <List.Section title={cosmicHeader("Pulse Inputs")}>
             {getPulseInputKinds().map((kind) => {
               const insight = insights[kind];
               const engineId = insight?.engineId ?? toEngineId(kind);
@@ -467,6 +480,7 @@ export default function Dashboard() {
                     source: getPulseIcon(kind),
                     tintColor: getPulseColor(kind),
                   }}
+                  /* Urania 137: pulse colors already mapped via getPulseColor */
                   title={{
                     value:
                       insight?.title ??
@@ -492,7 +506,7 @@ export default function Dashboard() {
                         color:
                           kind === selectedSourceKind
                             ? getPulseColor(kind)
-                            : Color.SecondaryText,
+                            : COLOR_SECONDARY,
                       },
                     },
                     {
@@ -521,6 +535,8 @@ export default function Dashboard() {
                               contextQuality,
                             ),
                         "",
+                        SECTION_DIVIDER,
+                        "",
                         insight?.title
                           ? `- Current signal: ${insight.title}`
                           : null,
@@ -541,14 +557,15 @@ export default function Dashboard() {
                   }
                   actions={
                     <NoesisActionPanel
+                      snapshot={snapshot}
                       onRefresh={handleRefresh}
                       hideDashboardAction
                       refreshTitle="Refresh Pulse"
                     >
-                      {engine ? (
+                      {canUseWorkbench && engine ? (
                         <Action.Push
                           title="Run Pulse Engine"
-                          icon={Icon.Play}
+                          icon={goldIcon(Icon.Play)}
                           target={
                             <EngineExecutionForm
                               engine={engine}
@@ -557,10 +574,10 @@ export default function Dashboard() {
                           }
                         />
                       ) : null}
-                      {engine ? (
+                      {canUseWorkbench && engine ? (
                         <Action.Push
                           title="View Pulse Engine"
-                          icon={Icon.ArrowRightCircle}
+                          icon={indigoIcon(Icon.ArrowRightCircle)}
                           target={
                             <EngineDetailView
                               engine={engine}
@@ -576,7 +593,7 @@ export default function Dashboard() {
             })}
           </List.Section>
 
-          <List.Section title="Recommended Now">
+          <List.Section title={cosmicHeader("Recommended Now")}>
             {recommendedNow.map((item) => {
               const workflow =
                 item.workflowId && snapshot
@@ -609,12 +626,15 @@ export default function Dashboard() {
                         "",
                         item.summary,
                         "",
+                        SECTION_DIVIDER,
+                        "",
                         `- Signal: ${item.subtitle}`,
                       ].join("\n")}
                     />
                   }
                   actions={
                     <NoesisActionPanel
+                      snapshot={snapshot}
                       onRefresh={handleRefresh}
                       hideDashboardAction
                       refreshTitle="Refresh Pulse"
@@ -622,21 +642,23 @@ export default function Dashboard() {
                       {item.id === "daily-witness" ? (
                         <Action
                           title="Run Daily Witness"
-                          icon={Icon.Eye}
+                          icon={emeraldIcon(Icon.Eye)}
                           onAction={() => openCommand("daily-witness")}
                         />
                       ) : null}
                       {item.id === "daily-practice" ? (
                         <Action
                           title="Run Daily Practice"
-                          icon={Icon.Play}
+                          icon={goldIcon(Icon.Play)}
                           onAction={() => openCommand("daily-practice")}
                         />
                       ) : null}
-                      {item.id === "nadabrahman-remedy" && engine ? (
+                      {canUseWorkbench &&
+                      item.id === "nadabrahman-remedy" &&
+                      engine ? (
                         <Action.Push
                           title="Run Nadabrahman Remedy"
-                          icon={Icon.Music}
+                          icon={indigoIcon(Icon.Music)}
                           target={
                             <EngineExecutionForm
                               engine={engine}
@@ -645,10 +667,12 @@ export default function Dashboard() {
                           }
                         />
                       ) : null}
-                      {item.id === "source-pulse" && engine ? (
+                      {canUseWorkbench &&
+                      item.id === "source-pulse" &&
+                      engine ? (
                         <Action.Push
                           title="Run Pulse Engine"
-                          icon={Icon.Play}
+                          icon={goldIcon(Icon.Play)}
                           target={
                             <EngineExecutionForm
                               engine={engine}
@@ -657,10 +681,10 @@ export default function Dashboard() {
                           }
                         />
                       ) : null}
-                      {workflow ? (
+                      {canUseWorkbench && workflow ? (
                         <Action.Push
                           title="Open Workflow Form"
-                          icon={Icon.Network}
+                          icon={violetIcon(Icon.Network)}
                           target={
                             <WorkflowExecutionForm
                               workflow={workflow}
@@ -677,7 +701,7 @@ export default function Dashboard() {
           </List.Section>
 
           {dashboardEngines.length ? (
-            <List.Section title="Engine Library">
+            <List.Section title={cosmicHeader("Engine Library")}>
               {dashboardEngines.map((engine) => (
                 <List.Item
                   key={engine.id}
@@ -685,6 +709,7 @@ export default function Dashboard() {
                     source: Icon.Stars,
                     tintColor: getPhaseColor(engine.requiredPhase),
                   }}
+                  /* Urania 137: phase colors already mapped via getPhaseColor */
                   title={{
                     value: engine.name,
                     tooltip: `${engine.name}\n${engine.id}`,
@@ -719,6 +744,8 @@ export default function Dashboard() {
                         "",
                         `${formatCount(getReadingCount(snapshot, engine.id), "cached reading")} in the current dashboard snapshot.`,
                         "",
+                        SECTION_DIVIDER,
+                        "",
                         "The full engine catalog remains visible below the guided ritual layer.",
                       ].join("\n")}
                     />
@@ -730,7 +757,7 @@ export default function Dashboard() {
                     >
                       <Action.Push
                         title="Run Engine"
-                        icon={Icon.Play}
+                        icon={goldIcon(Icon.Play)}
                         target={
                           <EngineExecutionForm
                             engine={engine}
@@ -740,7 +767,7 @@ export default function Dashboard() {
                       />
                       <Action.Push
                         title="View Engine"
-                        icon={Icon.ArrowRightCircle}
+                        icon={indigoIcon(Icon.ArrowRightCircle)}
                         target={
                           <EngineDetailView
                             engine={engine}
@@ -750,7 +777,7 @@ export default function Dashboard() {
                       />
                       <Action.Push
                         title="Browse Engines"
-                        icon={Icon.AppWindowList}
+                        icon={mutedIcon(Icon.AppWindowList)}
                         target={
                           <EnginesBrowser
                             initialSnapshot={snapshot}
@@ -766,11 +793,11 @@ export default function Dashboard() {
           ) : null}
 
           {dashboardWorkflows.length ? (
-            <List.Section title="Flow Library">
+            <List.Section title={cosmicHeader("Flow Library")}>
               {dashboardWorkflows.map((workflow) => (
                 <List.Item
                   key={workflow.id}
-                  icon={Icon.Network}
+                  icon={violetIcon(Icon.Network)}
                   title={{
                     value: workflow.name,
                     tooltip: `${workflow.name}\n${workflow.id}${workflow.description ? `\n\n${workflow.description}` : ""}`,
@@ -789,6 +816,8 @@ export default function Dashboard() {
                         "",
                         workflow.description || "Composite ritual workflow.",
                         "",
+                        SECTION_DIVIDER,
+                        "",
                         "The full workflow catalog remains visible below the guided ritual layer.",
                         "",
                         workflow.engineIds.length
@@ -804,7 +833,7 @@ export default function Dashboard() {
                     >
                       <Action.Push
                         title="Run Workflow"
-                        icon={Icon.Play}
+                        icon={goldIcon(Icon.Play)}
                         target={
                           <WorkflowExecutionForm
                             workflow={workflow}
@@ -814,7 +843,7 @@ export default function Dashboard() {
                       />
                       <Action.Push
                         title="View Workflow"
-                        icon={Icon.ArrowRightCircle}
+                        icon={indigoIcon(Icon.ArrowRightCircle)}
                         target={
                           <WorkflowDetailView
                             workflow={workflow}
@@ -824,7 +853,7 @@ export default function Dashboard() {
                       />
                       <Action.Push
                         title="Browse Workflows"
-                        icon={Icon.AppWindowList}
+                        icon={mutedIcon(Icon.AppWindowList)}
                         target={
                           <WorkflowsBrowser
                             initialSnapshot={snapshot}
@@ -856,18 +885,18 @@ function getContextQualityColor(
 ) {
   switch (status) {
     case "complete":
-      return Color.Green;
+      return COLOR_SUCCESS;
     case "usable":
-      return Color.Yellow;
+      return COLOR_WARNING;
     case "partial":
     default:
-      return Color.Orange;
+      return COLOR_WARNING;
   }
 }
 
 function getRemedyPendingTitle(snapshot: DashboardSnapshot): string {
   if (!snapshot.hasCredentials) {
-    return "Reconnect to Derive Remedy";
+    return "Witness Pulse Pending";
   }
 
   return "NadaBrahman Remedy Pending";
@@ -878,7 +907,7 @@ function getRemedyPendingSummary(
   contextQuality: ReturnType<typeof deriveContextQuality>,
 ): string {
   if (!snapshot.hasCredentials) {
-    return "Reconnect the API key so the extension can derive a NadaBrahman remedy from the live pulse cadence.";
+    return "Witness mode keeps Daily Ritual and source pulse cadence available. Add an access key when you want operator-grade direct remedy work.";
   }
 
   return contextQuality.status === "partial"
@@ -892,7 +921,7 @@ function getPulseInputPendingSummary(
   contextQuality: ReturnType<typeof deriveContextQuality>,
 ): string {
   if (!snapshot.hasCredentials) {
-    return "Reconnect the API key to warm this pulse input.";
+    return "Witness mode can refresh this source pulse without exposing an access key.";
   }
 
   if (kind !== "vedicClock" && contextQuality.status === "partial") {
@@ -916,17 +945,17 @@ function getPulseIcon(kind: MenuBarInsightKind): Icon {
   }
 }
 
-function getPulseColor(kind: MenuBarInsightKind): Color {
+function getPulseColor(kind: MenuBarInsightKind): string {
   switch (kind) {
     case "biorhythm":
-      return Color.Green;
+      return COLOR_SUCCESS;
     case "nadabrahman":
-      return Color.Blue;
+      return COLOR_INFO;
     case "vimshottari":
-      return Color.Orange;
+      return COLOR_WARNING;
     case "vedicClock":
     default:
-      return Color.Yellow;
+      return COLOR_WARNING;
   }
 }
 

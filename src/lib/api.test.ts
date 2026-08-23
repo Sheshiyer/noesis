@@ -404,6 +404,10 @@ test("calculateEngine posts execution input and maps the engine result", async (
     assert.equal(headers.get("X-API-Key"), "nk_test_key");
     assert.equal(headers.get("Content-Type"), "application/json");
     assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      client_context: {
+        source_client: "raycast-noesis",
+        device_platform: "macos",
+      },
       birth_data: {
         name: "Witness User",
         date: "1991-08-24",
@@ -513,6 +517,29 @@ test("calculateEngine prefers witness dyad response on the default route", async
   });
 });
 
+test("calculateEngine does not silently fall back when direct route has no access key", async () => {
+  await withExecutionRoute("selemene", async () => {
+    let called = false;
+    const fetchStub = (async () => {
+      called = true;
+      throw new Error("fetch should not run");
+    }) as typeof fetch;
+    await assert.rejects(
+      calculateEngine(
+        {
+          baseUrl: "https://selemene.tryambakam.space",
+          apiKey: "",
+        },
+        "vedic-clock",
+        {},
+        fetchStub,
+      ),
+      /api key is missing/i,
+    );
+    assert.equal(called, false);
+  });
+});
+
 test("withTarotExecutionOptions merges and normalizes tarot options", () => {
   const input = withTarotExecutionOptions(
     {
@@ -583,6 +610,10 @@ test("calculateTarot posts canonical spread and question", async () => {
       "https://selemene.tryambakam.space/api/v1/engines/tarot/calculate",
     );
     assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      client_context: {
+        source_client: "raycast-noesis",
+        device_platform: "macos",
+      },
       precision: "High",
       options: {
         context: "decision",
@@ -665,6 +696,10 @@ test("executeWorkflow posts execution input and maps workflow outputs", async ()
       "https://selemene.tryambakam.space/api/v1/workflows/daily-practice/execute",
     );
     assert.deepEqual(JSON.parse(String(calls[0]?.init?.body)), {
+      client_context: {
+        source_client: "raycast-noesis",
+        device_platform: "macos",
+      },
       birth_data: {
         date: "1991-08-24",
         time: "03:45:00",

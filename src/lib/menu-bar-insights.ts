@@ -32,11 +32,13 @@ export interface MenuBarInsightPlan {
   refreshAfterOverride?: string;
 }
 
+export const NADABRAHMAN_ENGINE_ID = "nadabrahman";
+
 const MENU_BAR_ENGINE_IDS: Record<MenuBarInsightKind, string> = {
   vedicClock: "vedic-clock",
   biorhythm: "biorhythm",
   vimshottari: "vimshottari",
-  nadabrahman: "nadabrahman",
+  nadabrahman: NADABRAHMAN_ENGINE_ID,
 };
 
 export function mapMenuBarInsights(
@@ -113,9 +115,6 @@ export function buildMenuBarRemedyPlan(
   }
 
   const cadence = buildPulseCadenceContext(insights, now.toISOString());
-  if (!cadence) {
-    return undefined;
-  }
 
   const remedyOlderThanSources = SOURCE_PULSE_KINDS.some((kind) => {
     const source = insights[kind];
@@ -138,7 +137,7 @@ export function buildMenuBarRemedyPlan(
 
   return {
     kind: "nadabrahman",
-    engineId: MENU_BAR_ENGINE_IDS.nadabrahman,
+    engineId: NADABRAHMAN_ENGINE_ID,
     input: {
       birthData: toBirthData(dashboard.profile),
       currentTime: now.toISOString(),
@@ -608,43 +607,54 @@ function formatInsightTitle(kind: MenuBarInsightKind, title: string): string {
 function buildPulseCadenceContext(
   insights: Partial<Record<MenuBarInsightKind, MenuBarInsightSnapshot>>,
   generatedAt: string,
-): Record<string, unknown> | undefined {
+): Record<string, unknown> {
   const vedicClock = insights.vedicClock;
   const biorhythm = insights.biorhythm;
   const vimshottari = insights.vimshottari;
 
-  if (!vedicClock || !biorhythm || !vimshottari) {
-    return undefined;
-  }
-
-  return {
+  const sourceEngines: string[] = [];
+  const context: Record<string, unknown> = {
     generated_at: generatedAt,
-    source_engines: SOURCE_PULSE_KINDS.map((kind) => MENU_BAR_ENGINE_IDS[kind]),
-    vedic_clock: {
+    source_engines: sourceEngines,
+  };
+
+  if (vedicClock) {
+    sourceEngines.push(MENU_BAR_ENGINE_IDS.vedicClock);
+    context.vedic_clock = {
       title: vedicClock.title,
       subtitle: vedicClock.subtitle,
       summary: vedicClock.summary,
       fetched_at: vedicClock.fetchedAt,
       refresh_after: vedicClock.refreshAfter,
       result: pickVedicClockCadenceResult(vedicClock.payload),
-    },
-    biorhythm: {
+    };
+  }
+
+  if (biorhythm) {
+    sourceEngines.push(MENU_BAR_ENGINE_IDS.biorhythm);
+    context.biorhythm = {
       title: biorhythm.title,
       subtitle: biorhythm.subtitle,
       summary: biorhythm.summary,
       fetched_at: biorhythm.fetchedAt,
       refresh_after: biorhythm.refreshAfter,
       result: pickBiorhythmCadenceResult(biorhythm.payload),
-    },
-    vimshottari: {
+    };
+  }
+
+  if (vimshottari) {
+    sourceEngines.push(MENU_BAR_ENGINE_IDS.vimshottari);
+    context.vimshottari = {
       title: vimshottari.title,
       subtitle: vimshottari.subtitle,
       summary: vimshottari.summary,
       fetched_at: vimshottari.fetchedAt,
       refresh_after: vimshottari.refreshAfter,
       result: pickVimshottariCadenceResult(vimshottari.payload),
-    },
-  };
+    };
+  }
+
+  return context;
 }
 
 function getCadenceRefreshAfter(

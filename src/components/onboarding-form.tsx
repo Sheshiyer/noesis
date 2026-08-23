@@ -11,6 +11,12 @@ import {
   Toast,
 } from "@raycast/api";
 import { normalizeBaseUrl, validateSelemeneCredentials } from "../lib/api";
+import {
+  COLOR_WARNING,
+  COLOR_SUCCESS,
+  cosmicHeader,
+  sacredSubheader,
+} from "../lib/design-tokens";
 import { openCommand } from "../lib/navigation";
 import {
   clearDashboardCache,
@@ -224,12 +230,12 @@ export function OnboardingForm(props: OnboardingFormProps) {
                 ? "Validate and Replace Key"
                 : "Validate and Save Key"
             }
-            icon={Icon.CheckCircle}
+            icon={{ source: Icon.CheckCircle, tintColor: COLOR_SUCCESS }}
             onSubmit={handleSubmit}
           />
           <Action
             title="Open Secure Preferences"
-            icon={Icon.Gear}
+            icon={{ source: Icon.Gear, tintColor: COLOR_WARNING }}
             onAction={openExtensionPreferences}
           />
           <Action
@@ -248,12 +254,12 @@ export function OnboardingForm(props: OnboardingFormProps) {
       }
     >
       <Form.Description
-        title={existingApiKey ? "Edit API Key" : "Connect API Key"}
-        text={
+        title={cosmicHeader(existingApiKey ? "Edit Access Key" : "Connect Access Key")}
+        text={sacredSubheader(
           apiKeyStorageMode === "preference"
             ? "The API key is currently managed in Raycast secure preferences. This command validates the current secure key, manages the base URL, and clears or refreshes local cache data."
             : "Connect Tryambakam Noesis to the Selemene Engine. Replacing the key clears the old local snapshot first, then warms the dashboard from the account attached to the new key."
-        }
+        )}
       />
       <Form.TextField
         id="baseUrl"
@@ -264,7 +270,7 @@ export function OnboardingForm(props: OnboardingFormProps) {
       />
       <Form.PasswordField
         id="apiKey"
-        title="API Key"
+        title="Access Key"
         info={
           apiKeyStorageMode === "preference"
             ? "Managed in Raycast secure preferences. Open Extension Preferences to rotate it."

@@ -6,6 +6,7 @@ import {
   buildMenuBarRemedyPlan,
   buildMenuBarTitle,
   buildPulseSubtitle,
+  NADABRAHMAN_ENGINE_ID,
 } from "./menu-bar-insights";
 import { DashboardSnapshot, EngineExecutionResult } from "./types";
 
@@ -128,7 +129,7 @@ test("buildMenuBarRemedyPlan derives a nadabrahman run from the cached pulse cad
     new Date("2026-04-22T12:20:00Z"),
   );
 
-  assert.equal(plan?.engineId, "nadabrahman");
+  assert.equal(plan?.engineId, NADABRAHMAN_ENGINE_ID);
   assert.equal(plan?.kind, "nadabrahman");
   assert.equal(plan?.input.precision, "Standard");
   assert.equal(plan?.input.birthData?.date, "1991-08-13");
@@ -195,7 +196,7 @@ test("buildMenuBarRemedyPlan schedules when source insights are newer than the r
     plan,
     "expected remedy plan to be scheduled because sources are newer",
   );
-  assert.equal(plan?.engineId, "nadabrahman");
+  assert.equal(plan?.engineId, NADABRAHMAN_ENGINE_ID);
 });
 
 test("buildMenuBarInsight derives a vedic clock title and next boundary refresh", () => {

@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Action, Form, Icon, showToast, Toast } from "@raycast/api";
+import { goldIcon } from "../lib/design-tokens";
 import { NoesisActionPanel } from "./noesis-actions";
 import { updateUserProfile } from "../lib/api";
 import { syncDashboardSnapshot } from "../lib/queries";
+import { saveLocalProfileSnapshot } from "../lib/local-profile";
 import {
   DashboardSnapshot,
   UserProfileSnapshot,
@@ -50,18 +52,9 @@ export function ProfileForm({
 
   const handleSubmit = async (values: ProfileFormValues) => {
     const config = await getStoredConfig();
-    if (!config) {
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "No Selemene Engine API key",
-        message: "Run API Key before saving your profile.",
-      });
-      return;
-    }
-
     const toast = await showToast({
       style: Toast.Style.Animated,
-      title: "Saving profile",
+      title: config ? "Saving profile" : "Saving ritual defaults",
     });
     setIsSubmitting(true);
     try {
@@ -69,11 +62,16 @@ export function ProfileForm({
         values,
         snapshot?.profile?.preferences ?? {},
       );
-      await updateUserProfile(config, payload);
-      await syncDashboardSnapshot({ force: true });
+      await saveLocalProfileSnapshot(payload, snapshot?.profile);
+      if (config) {
+        await updateUserProfile(config, payload);
+        await syncDashboardSnapshot({ force: true });
+      }
       toast.style = Toast.Style.Success;
-      toast.title = "Profile updated";
-      toast.message = "Birth data and timezone are ready for new readings.";
+      toast.title = config ? "Profile updated" : "Ritual defaults saved";
+      toast.message = config
+        ? "Birth data and timezone are ready for new readings."
+        : "Witness mode can use this context for Daily Ritual and Pulse & Remedy.";
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = "Profile update failed";
@@ -87,12 +85,16 @@ export function ProfileForm({
   return (
     <Form
       isLoading={isSubmitting}
-      navigationTitle="Tryambakam Profile"
+      navigationTitle="Ritual Defaults"
       actions={
-        <NoesisActionPanel>
+        <NoesisActionPanel snapshot={snapshot}>
           <Action.SubmitForm
-            title="Save Profile"
-            icon={Icon.CheckCircle}
+            title={
+              snapshot?.access?.canUseEngineWorkbench
+                ? "Save Profile"
+                : "Save Ritual Defaults"
+            }
+            icon={goldIcon(Icon.CheckCircle)}
             onSubmit={() =>
               handleSubmit({
                 fullName,
@@ -112,8 +114,8 @@ export function ProfileForm({
       }
     >
       <Form.Description
-        title="Profile"
-        text="These values get reused as the default birth data context for engine and workflow runs."
+        title="Ritual Defaults"
+        text="These values get reused as the birth data and timezone context for Daily Ritual and Pulse & Remedy. An access key also syncs them to Selemene."
       />
       <Form.TextField
         id="fullName"

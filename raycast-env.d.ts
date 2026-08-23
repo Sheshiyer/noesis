@@ -8,17 +8,17 @@
 /* eslint-disable @typescript-eslint/ban-types */
 
 type ExtensionPreferences = {
-  /** Tryambakam Noesis Access Key - Secure password preference for your Noesis access key. Preferred over legacy local storage. */
+  /** Tryambakam Noesis Access Key - Secure key for authenticated Selemene Engine requests. It never grants access to the separate admin domain. */
   "apiKey"?: string,
   /** Noesis Base URL - Optional fallback API URL when onboarding has not stored one yet. */
   "baseUrl": string,
   /** Daily Witness API URL - Trusted Witness gateway URL used only when the execution route preference is set to Witness. */
   "witnessUrl": string,
-  /** Execution Route - Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway. */
-  "executionRoute": "witness" | "selemene",
+  /** Execution Route - Selemene Engine is canonical. Witness Gateway remains an explicit compatibility route during migration. */
+  "executionRoute": "selemene" | "witness",
   /** Reading History Cache - Maximum number of reading rows to keep in the local SQLite cache. */
   "readingHistoryLimit": "25" | "50" | "100",
-  /** Store Raw Payloads - Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads. */
+  /** Store Raw Payloads - Keep full raw result JSON in the local cache for operator debugging. When off, Raycast stores only minimized payloads. */
   "cacheRawPayloads": boolean,
   /** Pulse Fallback Mode - Choose which source pulse should drive the menu bar when the current NadaBrahman remedy is unavailable. */
   "pulseMode": "nadabrahman" | "vedicClock" | "biorhythm" | "vimshottari"

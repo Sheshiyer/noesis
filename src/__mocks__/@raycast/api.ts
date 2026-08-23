@@ -1,8 +1,19 @@
+const localStorage = new Map<string, unknown>();
+
 export const LocalStorage = {
-  getItem: async <T>(): Promise<T | null> => null,
-  setItem: async () => {},
-  removeItem: async () => {},
+  getItem: async <T>(key: string): Promise<T | null> =>
+    localStorage.has(key) ? (localStorage.get(key) as T) : null,
+  setItem: async (key: string, value: unknown) => {
+    localStorage.set(key, value);
+  },
+  removeItem: async (key: string) => {
+    localStorage.delete(key);
+  },
 };
+
+export function __resetLocalStorage() {
+  localStorage.clear();
+}
 
 export function getPreferenceValues<T>(): T {
   return {} as T;

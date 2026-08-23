@@ -1,8 +1,24 @@
 import React from "react";
-import { Action, Color, Detail, Icon, List } from "@raycast/api";
+import { Action, Detail, Icon, List } from "@raycast/api";
+import {
+  COLOR_ERROR,
+  COLOR_INFO,
+  COLOR_SUCCESS,
+  COLOR_WARNING,
+  COLOR_SELECTED,
+  cosmicHeader,
+  sacredSubheader,
+  SECTION_DIVIDER,
+  goldIcon,
+  emeraldIcon,
+  indigoIcon,
+  violetIcon,
+  mutedIcon,
+} from "../lib/design-tokens";
 import { EngineExecutionForm, WorkflowExecutionForm } from "./execution-forms";
-import { OnboardingForm } from "./onboarding-form";
 import { NoesisActionPanel } from "./noesis-actions";
+import { WorkbenchAccessGate } from "./access-gate";
+import { canUseEngineWorkbench } from "../lib/access";
 import {
   formatAbsoluteTime,
   formatCalculationTime,
@@ -42,8 +58,14 @@ interface ReadingsBrowserProps extends BrowserProps {
 export function EnginesBrowser(props: BrowserProps) {
   const { snapshot, isLoading, error, reload } = useResolvedSnapshot(props);
 
-  if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => reload(true)} />;
+  if (snapshot && !canUseEngineWorkbench(snapshot)) {
+    return (
+      <WorkbenchAccessGate
+        feature="Engine Workbench"
+        isLoading={isLoading}
+        onRefresh={reload}
+      />
+    );
   }
 
   if (error && !snapshot) {
@@ -123,12 +145,13 @@ export function EnginesBrowser(props: BrowserProps) {
                 }
                 actions={
                   <NoesisActionPanel
+                    snapshot={snapshot}
                     onRefresh={reload}
                     refreshTitle="Refresh Engines"
                   >
                     <Action.Push
                       title="Run Engine"
-                      icon={Icon.Play}
+                      icon={goldIcon(Icon.Play)}
                       target={
                         <EngineExecutionForm
                           engine={engine}
@@ -138,14 +161,14 @@ export function EnginesBrowser(props: BrowserProps) {
                     />
                     <Action.Push
                       title="View Engine"
-                      icon={Icon.ArrowRightCircle}
+                      icon={goldIcon(Icon.ArrowRightCircle)}
                       target={
                         <EngineDetailView engine={engine} snapshot={snapshot} />
                       }
                     />
                     <Action.Push
                       title="View Engine Readings"
-                      icon={Icon.Book}
+                      icon={goldIcon(Icon.Book)}
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                       target={
                         <ReadingsBrowser
@@ -157,13 +180,13 @@ export function EnginesBrowser(props: BrowserProps) {
                     />
                     <Action.CopyToClipboard
                       title="Copy Engine Identifier"
-                      icon={Icon.Clipboard}
+                      icon={mutedIcon(Icon.Clipboard)}
                       content={engine.id}
                     />
                     {recentReading ? (
                       <Action.Push
                         title="Open Latest Reading"
-                        icon={Icon.Clock}
+                        icon={indigoIcon(Icon.Clock)}
                         shortcut={{ modifiers: ["cmd"], key: "l" }}
                         target={
                           <ReadingDetailView
@@ -187,8 +210,14 @@ export function EnginesBrowser(props: BrowserProps) {
 export function WorkflowsBrowser(props: BrowserProps) {
   const { snapshot, isLoading, error, reload } = useResolvedSnapshot(props);
 
-  if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => reload(true)} />;
+  if (snapshot && !canUseEngineWorkbench(snapshot)) {
+    return (
+      <WorkbenchAccessGate
+        feature="Workflow Workbench"
+        isLoading={isLoading}
+        onRefresh={reload}
+      />
+    );
   }
 
   if (error && !snapshot) {
@@ -261,12 +290,13 @@ export function WorkflowsBrowser(props: BrowserProps) {
                 }
                 actions={
                   <NoesisActionPanel
+                    snapshot={snapshot}
                     onRefresh={reload}
                     refreshTitle="Refresh Workflows"
                   >
                     <Action.Push
                       title="Run Workflow"
-                      icon={Icon.Play}
+                      icon={goldIcon(Icon.Play)}
                       target={
                         <WorkflowExecutionForm
                           workflow={workflow}
@@ -276,7 +306,7 @@ export function WorkflowsBrowser(props: BrowserProps) {
                     />
                     <Action.Push
                       title="View Workflow"
-                      icon={Icon.ArrowRightCircle}
+                      icon={goldIcon(Icon.ArrowRightCircle)}
                       target={
                         <WorkflowDetailView
                           workflow={workflow}
@@ -286,7 +316,7 @@ export function WorkflowsBrowser(props: BrowserProps) {
                     />
                     <Action.Push
                       title="View Workflow Readings"
-                      icon={Icon.Book}
+                      icon={goldIcon(Icon.Book)}
                       shortcut={{ modifiers: ["cmd"], key: "r" }}
                       target={
                         <ReadingsBrowser
@@ -298,13 +328,13 @@ export function WorkflowsBrowser(props: BrowserProps) {
                     />
                     <Action.CopyToClipboard
                       title="Copy Workflow Identifier"
-                      icon={Icon.Clipboard}
+                      icon={mutedIcon(Icon.Clipboard)}
                       content={workflow.id}
                     />
                     {recentReading ? (
                       <Action.Push
                         title="Open Latest Reading"
-                        icon={Icon.Clock}
+                        icon={indigoIcon(Icon.Clock)}
                         shortcut={{ modifiers: ["cmd"], key: "l" }}
                         target={
                           <ReadingDetailView
@@ -328,8 +358,14 @@ export function WorkflowsBrowser(props: BrowserProps) {
 export function ReadingsBrowser(props: ReadingsBrowserProps) {
   const { snapshot, isLoading, error, reload } = useResolvedSnapshot(props);
 
-  if (snapshot && !snapshot.hasCredentials && snapshot.source === "empty") {
-    return <OnboardingForm onSaved={() => reload(true)} />;
+  if (snapshot && !canUseEngineWorkbench(snapshot)) {
+    return (
+      <WorkbenchAccessGate
+        feature="Reading Archive"
+        isLoading={isLoading}
+        onRefresh={reload}
+      />
+    );
   }
 
   if (error && !snapshot) {
@@ -413,12 +449,13 @@ export function ReadingsBrowser(props: ReadingsBrowserProps) {
               }
               actions={
                 <NoesisActionPanel
+                  snapshot={snapshot}
                   onRefresh={reload}
                   refreshTitle="Refresh Readings"
                 >
                   <Action.Push
                     title="Open Reading"
-                    icon={Icon.Book}
+                    icon={goldIcon(Icon.Book)}
                     target={
                       <ReadingDetailView
                         reading={reading}
@@ -428,26 +465,26 @@ export function ReadingsBrowser(props: ReadingsBrowserProps) {
                   />
                   <Action.CopyToClipboard
                     title="Copy Reading Identifier"
-                    icon={Icon.Clipboard}
+                    icon={mutedIcon(Icon.Clipboard)}
                     content={reading.id}
                   />
                   {hasReadingRequestContext(reading) ? (
                     <Action.CopyToClipboard
                       title="Copy Request Payload"
-                      icon={Icon.Document}
+                      icon={mutedIcon(Icon.Document)}
                       shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
                       content={getReadingRequestJson(reading) ?? "{}"}
                     />
                   ) : null}
                   <Action.CopyToClipboard
                     title="Copy Raw Reading JSON"
-                    icon={Icon.Document}
+                    icon={mutedIcon(Icon.Document)}
                     shortcut={{ modifiers: ["cmd"], key: "c" }}
                     content={safeStringify(reading.payload)}
                   />
                   <Action.Push
                     title="Open Engines"
-                    icon={Icon.Stars}
+                    icon={goldIcon(Icon.Stars)}
                     shortcut={{ modifiers: ["cmd"], key: "e" }}
                     target={
                       <EnginesBrowser
@@ -482,12 +519,12 @@ export function EngineDetailView({
         <NoesisActionPanel>
           <Action.Push
             title="Run Engine"
-            icon={Icon.Play}
+            icon={goldIcon(Icon.Play)}
             target={<EngineExecutionForm engine={engine} snapshot={snapshot} />}
           />
           <Action.Push
             title="View Engine Readings"
-            icon={Icon.Book}
+            icon={goldIcon(Icon.Book)}
             target={
               <ReadingsBrowser
                 initialSnapshot={snapshot}
@@ -498,12 +535,12 @@ export function EngineDetailView({
           />
           <Action.CopyToClipboard
             title="Copy Engine Identifier"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={engine.id}
           />
           <Action
             title="Open Engines Command"
-            icon={Icon.AppWindowList}
+            icon={indigoIcon(Icon.AppWindowList)}
             onAction={() => openCommand("engines")}
           />
         </NoesisActionPanel>
@@ -528,14 +565,14 @@ export function WorkflowDetailView({
         <NoesisActionPanel>
           <Action.Push
             title="Run Workflow"
-            icon={Icon.Play}
+            icon={goldIcon(Icon.Play)}
             target={
               <WorkflowExecutionForm workflow={workflow} snapshot={snapshot} />
             }
           />
           <Action.Push
             title="View Workflow Readings"
-            icon={Icon.Book}
+            icon={goldIcon(Icon.Book)}
             target={
               <ReadingsBrowser
                 initialSnapshot={snapshot}
@@ -546,12 +583,12 @@ export function WorkflowDetailView({
           />
           <Action.CopyToClipboard
             title="Copy Workflow Identifier"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={workflow.id}
           />
           <Action
             title="Open Workflows Command"
-            icon={Icon.AppWindowList}
+            icon={indigoIcon(Icon.AppWindowList)}
             onAction={() => openCommand("workflows")}
           />
         </NoesisActionPanel>
@@ -576,31 +613,31 @@ export function ReadingDetailView({
         <NoesisActionPanel>
           <Action.CopyToClipboard
             title="Copy Reading Identifier"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={reading.id}
           />
           <Action.CopyToClipboard
             title="Copy Witness Prompt"
-            icon={Icon.Document}
+            icon={mutedIcon(Icon.Document)}
             content={reading.witnessPrompt || reading.engineId}
           />
           {hasReadingRequestContext(reading) ? (
             <Action.CopyToClipboard
               title="Copy Request Payload"
-              icon={Icon.Document}
+              icon={mutedIcon(Icon.Document)}
               shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
               content={getReadingRequestJson(reading) ?? "{}"}
             />
           ) : null}
           <Action.CopyToClipboard
             title="Copy Raw Reading JSON"
-            icon={Icon.Document}
+            icon={mutedIcon(Icon.Document)}
             shortcut={{ modifiers: ["cmd"], key: "c" }}
             content={safeStringify(reading.payload)}
           />
           <Action.Push
             title="Open Readings Command"
-            icon={Icon.AppWindowList}
+            icon={indigoIcon(Icon.AppWindowList)}
             target={
               <ReadingsBrowser initialSnapshot={snapshot} syncOnMount={false} />
             }
@@ -630,7 +667,7 @@ function BrowserErrorList({
   return (
     <List navigationTitle="Tryambakam Noesis">
       <List.Item
-        icon={{ source: Icon.XMarkCircle, tintColor: Color.Red }}
+        icon={{ source: Icon.XMarkCircle, tintColor: COLOR_ERROR }}
         title={title}
         subtitle={message}
         actions={<NoesisActionPanel onRefresh={onRefresh} />}
@@ -650,13 +687,13 @@ function buildEngineMarkdown(
   );
 
   return [
-    `# ${engine.name}`,
+    cosmicHeader(engine.name),
     "",
     `\`${engine.id}\``,
     "",
     `${formatPhaseLabel(engine.requiredPhase)} engine in the cached Selemene catalog.`,
     "",
-    "## Snapshot",
+    sacredSubheader("Snapshot"),
     "",
     `- ${formatCount(readingCount, "cached reading")}`,
     `- Last catalog touch: ${formatRelativeTime(engine.fetchedAt)}`,
@@ -667,13 +704,13 @@ function buildEngineMarkdown(
     "",
     recentReading
       ? [
-          "## Latest Witness Prompt",
+          sacredSubheader("Latest Witness Prompt"),
           "",
           truncate(recentReading.witnessPrompt, expanded ? 420 : 240) ||
             "_No witness prompt stored for this reading._",
         ].join("\n")
       : [
-          "## Next Surface",
+          sacredSubheader("Next Surface"),
           "",
           "Fresh reading execution now lives on this surface. Use the primary Run Engine action to post directly to Selemene and then refresh cached readings.",
         ].join("\n"),
@@ -688,13 +725,13 @@ function buildWorkflowMarkdown(
   const readingCount = getWorkflowReadingCount(snapshot, workflow.id);
 
   return [
-    `# ${workflow.name}`,
+    cosmicHeader(workflow.name),
     "",
     `\`${workflow.id}\``,
     "",
     workflow.description || "Cached workflow metadata from Selemene.",
     "",
-    "## Composition",
+    sacredSubheader("Composition"),
     "",
     `- ${workflow.engineCount} engines in this workflow`,
     `- ${formatCount(readingCount, "cached reading")} tied to this workflow in the current history window`,
@@ -705,7 +742,7 @@ function buildWorkflowMarkdown(
     "",
     expanded && workflow.engineIds.length
       ? [
-          "## Engine IDs",
+          sacredSubheader("Engine IDs"),
           "",
           "```text",
           workflow.engineIds.join("\n"),
@@ -1008,20 +1045,20 @@ function getReadingSectionTitle(createdAt: string): string {
 
 function getWorkflowColor(engineCount: number) {
   if (engineCount <= 1) {
-    return Color.Blue;
+    return COLOR_INFO;
   }
 
   if (engineCount <= 3) {
-    return Color.Orange;
+    return COLOR_WARNING;
   }
 
-  return Color.Magenta;
+  return COLOR_SELECTED;
 }
 
 function getReadingIcon(reading: ReadingSummary) {
   return reading.workflowId
-    ? { source: Icon.Network, tintColor: Color.Blue }
-    : { source: Icon.Book, tintColor: Color.Green };
+    ? { source: Icon.Network, tintColor: COLOR_INFO }
+    : { source: Icon.Book, tintColor: COLOR_SUCCESS };
 }
 
 function safeStringify(value: unknown, maxLength = 2000): string {

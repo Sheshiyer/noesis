@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-08-22T11:42:34.752Z",
+  "cwd": "/Volumes/madara/2026/Projects/thoughtseed/raycast-extensions/noesis",
+  "github": "Sheshiyer/noesis",
+  "gsd": {
+    "phase": "bootstrap",
+    "status": "Active",
+    "resume": null,
+    "focus": null,
+    "complete": false
+  },
+  "sources": [
+    {
+      "kind": "gsd",
+      "path": ".planning/STATE.md",
+      "weight": 100
+    },
+    {
+      "kind": "plan-doc",
+      "path": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md",
+      "weight": 45
+    },
+    {
+      "kind": "plan-doc",
+      "path": "docs/plans/2026-04-26-agent-contract.md",
+      "weight": 45
+    },
+    {
+      "kind": "plan-doc",
+      "path": "docs/plans/2026-04-22-noesis-raycast-upgrade-plan.md",
+      "weight": 45
+    },
+    {
+      "kind": "plan-doc",
+      "path": "tasks/plan-fix-raaga-menu-tray.md",
+      "weight": 45
+    },
+    {
+      "kind": "plan-doc",
+      "path": "tasks/todo.md",
+      "weight": 45
+    },
+    {
+      "kind": "plan-doc",
+      "path": "tasks/lessons.md",
+      "weight": 45
+    },
+    {
+      "kind": "gsd",
+      "path": ".planning/PROJECT.md",
+      "weight": 40
+    }
+  ],
+  "progress": {
+    "open": 10,
+    "done": 0,
+    "source": "/Volumes/madara/2026/Projects/thoughtseed/raycast-extensions/noesis/docs/plans/2026-06-30-dashboard-menu-refresh-fix.md",
+    "orphan_open_ignored": 0
+  },
+  "wave": {
+    "action": "execute_next",
+    "reason": "phase \"Post-Implementation Verification Checklist\" has 10 open tasks; take next batch",
+    "mode": "sequential-batch",
+    "phase": "Post-Implementation Verification Checklist",
+    "combo": "te-build",
+    "tasks": [
+      {
+        "id": "L1",
+        "parallel": false,
+        "desc": "`bun test` passes with no failures.",
+        "phase": "Post-Implementation Verification Checklist",
+        "source": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md"
+      },
+      {
+        "id": "L2",
+        "parallel": false,
+        "desc": "`npm run lint` passes with no errors.",
+        "phase": "Post-Implementation Verification Checklist",
+        "source": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md"
+      }
+    ]
+  },
+  "orchestration": {
+    "schema": "temperance.orchestration.v1",
+    "plan_id": "plan_6a0fefee1174d3129366",
+    "state": "awaiting_approval",
+    "mapping": {
+      "policy_hash": "f41f6873f99821c46610410fd977e0b454cbc60fd898ef6e8d06c4333bc32605",
+      "phase_combo_map": "temperance.phase-combo-map.v2",
+      "planner": "temperance-next-wave"
+    },
+    "source_fingerprints": [
+      {
+        "path": ".planning/STATE.md",
+        "fingerprint": "83ea7f856d7af6ba50935a23e35e820bf18ab3f05a49c284de5c874f7e6ddb3b"
+      },
+      {
+        "path": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md",
+        "fingerprint": "ee14c07a9cdb81f9ec8d78a94fcb7b7db11b056e630913bb0e3804e4c801046d"
+      },
+      {
+        "path": "docs/plans/2026-04-26-agent-contract.md",
+        "fingerprint": "9e50206dafb791816813d4edfd83bc0f80fc144ab2ab3b9dd352647bf7e4efc9"
+      },
+      {
+        "path": "docs/plans/2026-04-22-noesis-raycast-upgrade-plan.md",
+        "fingerprint": "91706c320ad67ba763939830abc441082c4bc47d3aca1862ab831caeda6069d0"
+      },
+      {
+        "path": "tasks/plan-fix-raaga-menu-tray.md",
+        "fingerprint": "d67f971a34c068519723d9fd306916a458a5ec77dacc56e0b12db0ad393a1ce6"
+      },
+      {
+        "path": "tasks/todo.md",
+        "fingerprint": "59ad0502a49880824e0dfff86feb9213dd653e97371ff5499766e0e5d295ff80"
+      },
+      {
+        "path": "tasks/lessons.md",
+        "fingerprint": "53d285ed623831541b77f11448fd40a38118ceea166afca6c688051f94c2d843"
+      },
+      {
+        "path": ".planning/PROJECT.md",
+        "fingerprint": "8a53918e20b7d58e761084fcfe1a5cb285ae5da8255cb279bd53eaa9cb1b6fa6"
+      }
+    ],
+    "research": [],
+    "options": [
+      {
+        "option_id": "opt_a86ded62240f0dd3b89f",
+        "label": "Execute the proposed next task",
+        "recommendation": true,
+        "rationale": "phase \"Post-Implementation Verification Checklist\" has 10 open tasks; take next batch",
+        "tasks": [
+          {
+            "id": "L1",
+            "parallel": false,
+            "desc": "`bun test` passes with no failures.",
+            "phase": "Post-Implementation Verification Checklist",
+            "source": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md"
+          },
+          {
+            "id": "L2",
+            "parallel": false,
+            "desc": "`npm run lint` passes with no errors.",
+            "phase": "Post-Implementation Verification Checklist",
+            "source": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md"
+          }
+        ],
+        "combo": "te-build",
+        "concurrency": 2,
+        "worktree_required": false
+      }
+    ],
+    "approval": {
+      "approval_id": "apr_bf3e7e6411539eddd9ff",
+      "status": "required",
+      "expires_at": "2026-08-22T11:52:34.751Z",
+      "selected_option_id": null
+    },
+    "readiness": {
+      "status": "blocked",
+      "checks": [
+        "human_approval",
+        "source_freshness",
+        "quota_snapshot",
+        "dispatch_receipt"
+      ]
+    },
+    "execution": {
+      "status": "blocked",
+      "reason": "human approval is required before any swarm dispatch"
+    },
+    "reporting": {
+      "status": "pending",
+      "required_receipts": [
+        "dispatch",
+        "task",
+        "verification"
+      ]
+    }
+  },
+  "agent_instruction": "NEXT-WAVE (proposal only — human approval required before dispatch):\n  action=execute_next · phase \"Post-Implementation Verification Checklist\" has 10 open tasks; take next batch\n  gsd_phase=bootstrap status=Active\n  github=Sheshiyer/noesis\n  wave_mode=sequential-batch phase=\"Post-Implementation Verification Checklist\" open_total=10\n  - [ ] L1: `bun test` passes with no failures.\n  - [ ] L2: `npm run lint` passes with no errors.\n  DO: present the proposed option and wait for an explicit approval receipt before executing it.\n  SYNC: plan-issue-sync LaunchAgent promotes open plan docs → Sheshiyer/thoughtseed-vault issues hourly; run temperance-next-wave --sync to force."
+}

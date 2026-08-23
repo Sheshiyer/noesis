@@ -15,6 +15,25 @@ export interface SelemeneClientConfig {
 
 export type ExecutionRouteTarget = "selemene" | "witness";
 
+export type ApiKeyStorageMode =
+  | "preference"
+  | "localStorage"
+  | "environment"
+  | "none";
+
+export type AccessMode = "admin" | "witness";
+
+export interface AccessContext {
+  mode: AccessMode;
+  hasAccessKey: boolean;
+  apiKeyStorageMode: ApiKeyStorageMode;
+  requestedExecutionRoute: ExecutionRouteTarget;
+  effectiveExecutionRoute: ExecutionRouteTarget;
+  canUseDailyRitual: boolean;
+  canUseAmbientCompanion: boolean;
+  canUseEngineWorkbench: boolean;
+}
+
 export interface ExecutionRouteInfo {
   target: ExecutionRouteTarget;
   label: string;
@@ -208,6 +227,7 @@ export type SnapshotSource = "empty" | "cache" | "live";
 export interface DashboardSnapshot {
   baseUrl: string;
   hasCredentials: boolean;
+  access?: AccessContext;
   cacheState: CacheState;
   source: SnapshotSource;
   health?: HealthSnapshot;

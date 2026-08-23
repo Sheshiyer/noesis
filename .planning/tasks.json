@@ -1,0 +1,130 @@
+[
+  {
+    "id": "T1",
+    "title": "Create design tokens module",
+    "description": "Create src/lib/design-tokens.ts with Urania 137 palette, Color.Dynamic variants, semantic aliases, icon helpers, markdown helpers",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Module exports all design tokens, compiles without errors"
+  },
+  {
+    "id": "T2",
+    "title": "Update formatters to use Urania 137 palette",
+    "description": "Update getHealthColor(), getCacheColor(), getPhaseColor() in src/lib/formatters.ts to return COLOR_* constants from design-tokens",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "All color functions return string (Color.Raw), no Color enum references"
+  },
+  {
+    "id": "T3",
+    "title": "Migrate all Color enum references",
+    "description": "Replace all Color.Green/Blue/Orange/Magenta/Red/Yellow/SecondaryText references across all components with COLOR_* constants",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "grep -r 'Color\\.' src/ returns zero matches, all components use COLOR_*"
+  },
+  {
+    "id": "T4",
+    "title": "Redesign onboarding form",
+    "description": "Redesign src/components/onboarding-form.tsx with cosmic aesthetic, gold accents, sacred geometry framing",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Form uses Urania 137 palette, cosmic header, gold-accented submit button"
+  },
+  {
+    "id": "T5",
+    "title": "Redesign access gate screen",
+    "description": "Redesign src/components/access-gate.tsx with sacred geometry framing, violet accents",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Gate screen uses sacred geometry patterns, violet accent colors"
+  },
+  {
+    "id": "T6",
+    "title": "Redesign dashboard",
+    "description": "Redesign src/dashboard.tsx with orbital node styling, Urania 137 palette throughout",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Dashboard uses orbital node layout, gold/emerald/indigo/violet accents"
+  },
+  {
+    "id": "T7",
+    "title": "Redesign menu bar",
+    "description": "Redesign src/menubar.tsx with gold-accented items, sacred geometry icons",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Menu items use gold accents, sacred geometry icon tinting"
+  },
+  {
+    "id": "T8",
+    "title": "Redesign developer tools",
+    "description": "Redesign src/developer-tools.tsx with cosmic diagnostic panels",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Diagnostic panels use Urania 137 palette, cosmic styling"
+  },
+  {
+    "id": "T9",
+    "title": "Redesign daily ritual",
+    "description": "Redesign src/components/daily-ritual-command.tsx with sacred geometry loading states",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Loading states use sacred geometry patterns, gold accents"
+  },
+  {
+    "id": "T10",
+    "title": "Redesign profile form",
+    "description": "Redesign src/components/profile-form.tsx with cosmic birth data entry",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Birth data form uses cosmic aesthetic, gold accents"
+  },
+  {
+    "id": "T11",
+    "title": "Redesign execution forms",
+    "description": "Redesign src/components/execution-forms.tsx with gold/emerald action styling",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Action buttons use gold/emerald styling, sacred geometry patterns"
+  },
+  {
+    "id": "T12",
+    "title": "Redesign browsers",
+    "description": "Redesign src/components/noesis-browsers.tsx with orbital node browsing experience",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Browser lists use orbital node styling, Urania 137 palette"
+  },
+  {
+    "id": "T13",
+    "title": "Redesign actions",
+    "description": "Redesign src/components/noesis-actions.tsx with Urania 137 styling",
+    "status": "completed",
+    "phase": "Build",
+    "acceptance": "Action panels use Urania 137 palette, sacred geometry accents"
+  },
+  {
+    "id": "T14",
+    "title": "Verify all tests pass",
+    "description": "Run npm test to verify all 76 tests across 13 files pass after UI redesign",
+    "status": "completed",
+    "phase": "Verify",
+    "acceptance": "npm test passes with 76/76 tests"
+  },
+  {
+    "id": "T15",
+    "title": "Verify TypeScript compiles",
+    "description": "Run npm run build to verify TypeScript compilation succeeds",
+    "status": "completed",
+    "phase": "Verify",
+    "acceptance": "npm run build passes with no type errors"
+  },
+  {
+    "id": "T16",
+    "title": "Update README and QUICKSTART",
+    "description": "Document Urania 137 design system integration in README.md and QUICKSTART.md",
+    "status": "completed",
+    "phase": "Learn",
+    "acceptance": "Documentation includes Urania 137 palette, design tokens usage"
+  }
+]

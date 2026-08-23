@@ -67,6 +67,25 @@ test("getDashboardEngines keeps the full catalog while ordering active engines f
   );
 });
 
+test("getDashboardEngines hides the workbench catalog in Witness mode", () => {
+  const snapshot = createSnapshot({
+    hasCredentials: false,
+    access: {
+      mode: "witness",
+      hasAccessKey: false,
+      apiKeyStorageMode: "none",
+      requestedExecutionRoute: "witness",
+      effectiveExecutionRoute: "witness",
+      canUseDailyRitual: true,
+      canUseAmbientCompanion: true,
+      canUseEngineWorkbench: false,
+    },
+    engines: [{ id: "tarot", name: "Tarot", requiredPhase: 0 }],
+  });
+
+  assert.deepEqual(getDashboardEngines(snapshot), []);
+});
+
 test("getDashboardWorkflows keeps the full catalog while ordering larger flows first", () => {
   const snapshot = createSnapshot({
     workflows: [
@@ -108,4 +127,31 @@ test("getDashboardWorkflows keeps the full catalog while ordering larger flows f
     workflows.map((workflow) => workflow.id),
     ["full-portrait", "daily-practice", "deep-dive", "single-checkin"],
   );
+});
+
+test("getDashboardWorkflows hides the workbench catalog in Witness mode", () => {
+  const snapshot = createSnapshot({
+    hasCredentials: false,
+    access: {
+      mode: "witness",
+      hasAccessKey: false,
+      apiKeyStorageMode: "none",
+      requestedExecutionRoute: "witness",
+      effectiveExecutionRoute: "witness",
+      canUseDailyRitual: true,
+      canUseAmbientCompanion: true,
+      canUseEngineWorkbench: false,
+    },
+    workflows: [
+      {
+        id: "deep-dive",
+        name: "Deep Dive",
+        description: "Composite",
+        engineCount: 3,
+        engineIds: ["numerology", "tarot", "human-design"],
+      },
+    ],
+  });
+
+  assert.deepEqual(getDashboardWorkflows(snapshot), []);
 });

@@ -46,8 +46,8 @@ export async function loadMenuBarState(
 
   try {
     log("loadMenuBarState start", { force: options.force });
-    const config = await getStoredConfig();
-    log("config loaded", { found: Boolean(config) });
+    const storedConfig = await getStoredConfig();
+    log("config loaded", { found: Boolean(storedConfig) });
 
     const dashboard = await syncDashboardSnapshot({
       force: options.force ?? false,
@@ -64,7 +64,12 @@ export async function loadMenuBarState(
     let syncIssues: SyncIssue[] = [];
     let syncError: string | undefined;
 
-    if (config && dashboard.profile?.birthDate) {
+    const config = storedConfig ?? {
+      baseUrl: dashboard.baseUrl,
+      apiKey: "",
+    };
+
+    if (dashboard.access?.canUseAmbientCompanion ?? true) {
       const result = await syncMenuBarInsights({
         dashboard,
         force: options.force ?? false,
@@ -80,7 +85,7 @@ export async function loadMenuBarState(
       });
     } else {
       log("skipping insights sync", {
-        hasConfig: Boolean(config),
+        hasConfig: Boolean(storedConfig),
         hasBirthDate: Boolean(dashboard.profile?.birthDate),
       });
       insights = mapMenuBarInsights(getCacheRepository().readMenuBarInsights());
@@ -91,7 +96,7 @@ export async function loadMenuBarState(
       insights,
       syncIssues,
       syncError,
-      configFound: Boolean(config),
+      configFound: Boolean(storedConfig),
       logs,
     };
   } catch (error) {

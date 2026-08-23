@@ -21,7 +21,10 @@ import {
   WorkflowSummary,
 } from "./types";
 import { describeTarget, JsonRequestError, requestJson } from "./http";
-import { getExecutionRoutePreference } from "./settings";
+import {
+  getEffectiveExecutionRoute,
+  getExecutionRoutePreference,
+} from "./settings";
 import { getWitnessLayer, selectWitnessText } from "./witness-text";
 import { getWitnessUrl } from "./witness-api";
 import { normalizeBaseUrl } from "./urls";
@@ -29,7 +32,10 @@ import { normalizeBaseUrl } from "./urls";
 async function resolveExecutionRoute(
   config: SelemeneClientConfig,
 ): Promise<ExecutionRouteInfo> {
-  const target = getExecutionRoutePreference();
+  const target = getEffectiveExecutionRoute(
+    getExecutionRoutePreference(),
+    Boolean(config.apiKey.trim()),
+  );
 
   if (target === "witness") {
     const witnessUrl = await getWitnessUrl();
@@ -442,13 +448,13 @@ class SelemeneApiClient {
 
     if (!this.baseUrl) {
       throw new Error(
-        "Selemene base URL is missing. Configure it in the API Key command or via the environment.",
+        "Selemene base URL is missing. Configure it in Access Key or via the environment.",
       );
     }
 
     if (!this.apiKey) {
       throw new Error(
-        "Selemene Engine API key is missing. Run the API Key command before using the extension.",
+        "Selemene Engine API key is missing. Add an access key before using operator workbench surfaces.",
       );
     }
   }
@@ -639,7 +645,7 @@ function normalizeSelemeneError(error: unknown): Error {
       return new Error(error.message);
     case "parse":
       return new Error(
-        "Selemene returned an unreadable response. Check the backend or gateway for malformed JSON.",
+        "Selemene returned an unreadable response. Check the service or gateway for malformed JSON.",
       );
     case "http":
     default:
@@ -922,7 +928,12 @@ function withEngineOutputsRecord(
 function toExecutionRequest(
   input: EngineExecutionInput,
 ): Record<string, unknown> {
-  const request: Record<string, unknown> = {};
+  const request: Record<string, unknown> = {
+    client_context: {
+      source_client: "raycast-noesis",
+      device_platform: "macos",
+    },
+  };
 
   if (
     input.birthData &&

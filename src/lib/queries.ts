@@ -1,7 +1,9 @@
 import path from "node:path";
 import { environment } from "@raycast/api";
 import { calculateEngine, fetchRemoteSnapshot, normalizeBaseUrl } from "./api";
+import { buildAccessContext, resolveAccessContext } from "./access";
 import { createNoesisCacheRepository } from "./cache";
+import { readLocalProfileSnapshot } from "./local-profile";
 import {
   buildMenuBarInsight,
   buildMenuBarInsightPlans,
@@ -94,7 +96,7 @@ export async function syncDashboardSnapshot(
   const config = options.configOverride ?? (await getStoredConfig());
   const baseUrl =
     config?.baseUrl ?? (await getStoredBaseUrl()) ?? DEFAULT_BASE_URL;
-  const cached = decorateSnapshot(
+  const cached = await decorateSnapshot(
     repository.readSnapshot(normalizeBaseUrl(baseUrl), Boolean(config)),
   );
 
@@ -185,7 +187,9 @@ export async function syncMenuBarInsights(options: {
     options.force,
   );
   const includeRawPayloads = shouldCacheRawPayloadsPreference();
-  const routeTarget = getExecutionRoutePreference();
+  const routeTarget =
+    options.dashboard.access?.effectiveExecutionRoute ??
+    getExecutionRoutePreference();
   const sourceSettled = await Promise.allSettled(
     plans.map(async (plan) => {
       const result = await withTimeout(
@@ -298,15 +302,10 @@ export async function syncMenuBarSnapshot(
   options: { force?: boolean } = {},
 ): Promise<MenuBarSnapshot> {
   const dashboard = await syncDashboardSnapshot({ force: options.force });
-  const config = await getStoredConfig();
-
-  if (!config) {
-    return {
-      dashboard,
-      insights: mapMenuBarInsights(getCacheRepository().readMenuBarInsights()),
-      syncIssues: [],
-    };
-  }
+  const config = (await getStoredConfig()) ?? {
+    baseUrl: dashboard.baseUrl,
+    apiKey: "",
+  };
 
   const { insights, syncIssues, syncError } = await syncMenuBarInsights({
     dashboard,
@@ -327,28 +326,54 @@ function getCacheRepository() {
   });
 }
 
-function decorateSnapshot(
+async function decorateSnapshot(
   snapshot: DashboardSnapshot,
   source: DashboardSnapshot["source"] = "cache",
-): DashboardSnapshot {
-  const hasData = hasAnyData(snapshot);
+): Promise<DashboardSnapshot> {
+  const resolvedAccess = await resolveAccessContext();
+  const access =
+    resolvedAccess.hasAccessKey || !snapshot.hasCredentials
+      ? resolvedAccess
+      : buildAccessContext({
+          apiKeyStorageMode: "environment",
+          requestedExecutionRoute: resolvedAccess.requestedExecutionRoute,
+        });
+  const localProfile = await readLocalProfileSnapshot();
+  const nextSnapshot =
+    access.canUseEngineWorkbench || !localProfile
+      ? snapshot
+      : {
+          ...snapshot,
+          profile: localProfile,
+          usage: undefined,
+          readings: [],
+          readingStats: [],
+          syncIssues: snapshot.syncIssues.filter(
+            (issue) => issue.resource !== "profile",
+          ),
+        };
+  const hasData = hasAnyData(nextSnapshot);
   const cacheState = !hasData
     ? "empty"
-    : snapshot.hasCredentials
-      ? anyStale(snapshot)
+    : access.canUseEngineWorkbench
+      ? anyStale(nextSnapshot)
         ? "stale"
         : source === "live"
           ? "fresh"
-          : snapshot.cacheState
+          : nextSnapshot.cacheState
       : "cached";
 
   return {
-    ...snapshot,
+    ...nextSnapshot,
+    access,
+    hasCredentials: access.hasAccessKey,
     source: hasData ? source : "empty",
     cacheState,
-    syncIssues: snapshot.syncIssues ?? [],
+    syncIssues: nextSnapshot.syncIssues ?? [],
     syncError:
-      snapshot.syncError ?? snapshot.syncIssues?.[0]?.message ?? undefined,
+      nextSnapshot.syncError ??
+      nextSnapshot.syncIssues?.[0]?.message ??
+      undefined,
   };
 }
 

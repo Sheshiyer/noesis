@@ -2,7 +2,7 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "noesis",
   "title": "Tryambakam Noesis",
-  "description": "Ritual guidance in Raycast for pulse cadence, NadaBrahman remedies, Daily Witness, and guided practice flows.",
+  "description": "Read the current pattern in Raycast through pulse cadence, Noesis Engine lenses, Daily Witness, and authored next actions.",
   "icon": "icon.png",
   "author": "mage_narayan",
   "homepage": "https://github.com/Sheshiyer/noesis#readme",
@@ -31,7 +31,7 @@
     {
       "name": "apiKey",
       "title": "Tryambakam Noesis Access Key",
-      "description": "Secure password preference for your Noesis access key. Preferred over legacy local storage.",
+      "description": "Secure key for authenticated Selemene Engine requests. It never grants access to the separate admin domain.",
       "type": "password",
       "required": false
     },
@@ -54,18 +54,18 @@
     {
       "name": "executionRoute",
       "title": "Execution Route",
-      "description": "Choose where engine and workflow runs execute: directly against Selemene or through the Witness gateway.",
+      "description": "Selemene Engine is canonical. Witness Gateway remains an explicit compatibility route during migration.",
       "type": "dropdown",
       "required": false,
-      "default": "witness",
+      "default": "selemene",
       "data": [
         {
-          "title": "Witness Gateway",
-          "value": "witness"
+          "title": "Selemene Engine (Canonical)",
+          "value": "selemene"
         },
         {
-          "title": "Selemene Direct",
-          "value": "selemene"
+          "title": "Witness Gateway (Compatibility)",
+          "value": "witness"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "name": "cacheRawPayloads",
       "title": "Store Raw Payloads",
       "label": "Keep full raw result JSON in the local cache",
-      "description": "Keep full raw result JSON in the local cache for debugging. When off, Raycast stores only minimized payloads.",
+      "description": "Keep full raw result JSON in the local cache for operator debugging. When off, Raycast stores only minimized payloads.",
       "type": "checkbox",
       "required": false,
       "default": false
@@ -131,7 +131,7 @@
     {
       "name": "dashboard",
       "title": "Dashboard",
-      "description": "Ritual dashboard for current remedy, pulse inputs, guided actions, and the full engine and flow libraries",
+      "description": "Daily Ritual cockpit for current pattern, pulse inputs, remedy signal, and authored next actions",
       "keywords": [
         "dashboard",
         "overview",
@@ -145,42 +145,45 @@
     {
       "name": "engines",
       "title": "Engines",
-      "description": "Browse the engine library that powers pulse inputs, remedies, and deeper readings",
+      "description": "Operator workbench for Noesis Engine lenses, direct runs, and cached reading context",
       "keywords": [
         "engines",
         "catalog",
         "readings",
         "pulse"
       ],
-      "mode": "view"
+      "mode": "view",
+      "disabledByDefault": true
     },
     {
       "name": "workflows",
       "title": "Workflows",
-      "description": "Browse guided ritual flows with workflow composition previews and cached reading context",
+      "description": "Operator workbench for workflow chains, engine composition, and direct multi-engine runs",
       "keywords": [
         "workflows",
         "flows",
         "chains",
         "practice"
       ],
-      "mode": "view"
+      "mode": "view",
+      "disabledByDefault": true
     },
     {
       "name": "readings",
       "title": "Readings",
-      "description": "Browse cached reading history with payload previews and detail views",
+      "description": "Operator archive for cached reading history, request context, and payload inspection",
       "keywords": [
         "readings",
         "history",
         "results"
       ],
-      "mode": "view"
+      "mode": "view",
+      "disabledByDefault": true
     },
     {
       "name": "profile",
-      "title": "Profile",
-      "description": "Edit shared birth data, timezone, and reusable defaults that shape every ritual run",
+      "title": "Ritual Defaults",
+      "description": "Edit birth data, timezone, and reusable context for Daily Ritual and Pulse & Remedy",
       "keywords": [
         "profile",
         "birth-data",
@@ -190,8 +193,8 @@
     },
     {
       "name": "api-key",
-      "title": "API Key",
-      "description": "Connect, edit, or rotate the Noesis access key and warm the local cache",
+      "title": "Access Key",
+      "description": "Connect, edit, or rotate the Noesis access key that unlocks operator workbench surfaces",
       "mode": "view"
     },
     {
@@ -223,7 +226,7 @@
     {
       "name": "developer-tools",
       "title": "Developer Tools",
-      "description": "Connection, routing, cache, usage, and sync diagnostics for the Noesis ritual surfaces",
+      "description": "Operator diagnostics for connection, routing, cache, usage, and sync instrumentation",
       "keywords": [
         "developer",
         "diagnostics",
@@ -231,7 +234,8 @@
         "cache",
         "sync"
       ],
-      "mode": "view"
+      "mode": "view",
+      "disabledByDefault": true
     },
     {
       "name": "menubar",

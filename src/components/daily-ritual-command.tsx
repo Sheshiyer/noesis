@@ -8,6 +8,16 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
+import {
+  cosmicHeader,
+  sacredSubheader,
+  SECTION_DIVIDER,
+  goldIcon,
+  emeraldIcon,
+  indigoIcon,
+  violetIcon,
+  mutedIcon,
+} from "../lib/design-tokens";
 import { executeWorkflow } from "../lib/api";
 import {
   buildDailyWitnessInitialValues,
@@ -31,14 +41,11 @@ import {
 import { formatAbsoluteTime, formatCalculationTime } from "../lib/formatters";
 import { openCommand } from "../lib/navigation";
 import { syncDashboardSnapshot } from "../lib/queries";
-import {
-  getExecutionRoutePreference,
-  getStoredBaseUrl,
-  getStoredConfig,
-} from "../lib/settings";
+import { getStoredBaseUrl, getStoredConfig } from "../lib/settings";
 import { WorkflowExecutionResult } from "../lib/types";
 import { useDashboardSnapshot } from "../lib/use-dashboard-snapshot";
 import { NoesisActionPanel } from "./noesis-actions";
+import { canUseEngineWorkbench, getSnapshotAccess } from "../lib/access";
 
 interface DailyRitualCommandProps {
   commandTitle: string;
@@ -73,7 +80,7 @@ export function DailyRitualCommand({
     [snapshot],
   );
   const contextQuality = deriveContextQuality(snapshot);
-  const executionRoute = getExecutionRoutePreference();
+  const executionRoute = getSnapshotAccess(snapshot).effectiveExecutionRoute;
   const executionRouteLabel =
     executionRoute === "witness" ? "Witness Gateway" : "Selemene Direct";
 
@@ -221,6 +228,7 @@ export function DailyRitualCommand({
       <WorkflowResultView
         commandTitle={commandTitle}
         response={response}
+        snapshot={snapshot}
         onBack={() => {
           setResponse(null);
           setIsEditingInputs(false);
@@ -235,6 +243,7 @@ export function DailyRitualCommand({
       <FailureResultView
         commandTitle={commandTitle}
         failure={failure}
+        snapshot={snapshot}
         onBack={() => {
           setFailure(null);
           setIsEditingInputs(false);
@@ -265,6 +274,7 @@ export function DailyRitualCommand({
         isLoading={isLoading}
         actions={
           <NoesisActionPanel
+            snapshot={snapshot}
             onRefresh={reload}
             hideDashboardAction
             refreshTitle="Refresh Ritual Defaults"
@@ -276,7 +286,7 @@ export function DailyRitualCommand({
             />
             <Action
               title="Back to Overview"
-              icon={Icon.ArrowLeft}
+              icon={mutedIcon(Icon.ArrowLeft)}
               onAction={() => setIsEditingInputs(false)}
             />
           </NoesisActionPanel>
@@ -356,6 +366,7 @@ export function DailyRitualCommand({
       })}
       actions={
         <NoesisActionPanel
+          snapshot={snapshot}
           onRefresh={reload}
           refreshTitle="Refresh Ritual Defaults"
         >
@@ -366,12 +377,12 @@ export function DailyRitualCommand({
           />
           <Action
             title="Edit Inputs"
-            icon={Icon.Pencil}
+            icon={goldIcon(Icon.Pencil)}
             onAction={() => setIsEditingInputs(true)}
           />
           <Action
             title="Open Profile"
-            icon={Icon.PersonCircle}
+            icon={goldIcon(Icon.PersonCircle)}
             onAction={() => openCommand("profile")}
           />
         </NoesisActionPanel>
@@ -383,11 +394,13 @@ export function DailyRitualCommand({
 function WorkflowResultView({
   commandTitle,
   response,
+  snapshot,
   onBack,
   onRetry,
 }: {
   commandTitle: string;
   response: DailyWitnessResultState;
+  snapshot: Parameters<typeof canUseEngineWorkbench>[0];
   onBack: () => void;
   onRetry: () => void;
 }) {
@@ -401,27 +414,31 @@ function WorkflowResultView({
     [response],
   );
 
+  const canUseWorkbench = canUseEngineWorkbench(snapshot);
+
   return (
     <Detail
       navigationTitle={commandTitle}
       markdown={markdown}
       metadata={buildWorkflowMetadata(response)}
       actions={
-        <NoesisActionPanel hideDashboardAction>
-          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onBack} />
+        <NoesisActionPanel hideDashboardAction snapshot={snapshot}>
+          <Action title="Edit Inputs" icon={goldIcon(Icon.Pencil)} onAction={onBack} />
           <Action
             title={`Run ${commandTitle} Again`}
-            icon={Icon.RotateClockwise}
+            icon={goldIcon(Icon.RotateClockwise)}
             onAction={onRetry}
           />
-          <Action
-            title="Open Readings"
-            icon={Icon.Book}
-            onAction={() => openCommand("readings")}
-          />
+          {canUseWorkbench ? (
+            <Action
+              title="Open Readings"
+              icon={goldIcon(Icon.Book)}
+              onAction={() => openCommand("readings")}
+            />
+          ) : null}
           <Action
             title="Copy Reading"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             onAction={async () => {
               await Clipboard.copy(markdown);
               await showToast({
@@ -430,16 +447,20 @@ function WorkflowResultView({
               });
             }}
           />
-          <Action.CopyToClipboard
-            title="Copy Request JSON"
-            icon={Icon.Document}
-            content={response.requestJson}
-          />
-          <Action.CopyToClipboard
-            title="Copy Raw Result JSON"
-            icon={Icon.Clipboard}
-            content={JSON.stringify(response.result.raw, null, 2)}
-          />
+          {canUseWorkbench ? (
+            <>
+              <Action.CopyToClipboard
+                title="Copy Request JSON"
+                icon={mutedIcon(Icon.Document)}
+                content={response.requestJson}
+              />
+              <Action.CopyToClipboard
+                title="Copy Raw Result JSON"
+                icon={mutedIcon(Icon.Clipboard)}
+                content={JSON.stringify(response.result.raw, null, 2)}
+              />
+            </>
+          ) : null}
         </NoesisActionPanel>
       }
     />
@@ -521,36 +542,40 @@ function LoadingResultView({
 function FailureResultView({
   commandTitle,
   failure,
+  snapshot,
   onBack,
   onRetry,
 }: {
   commandTitle: string;
   failure: DailyWitnessFailureState;
+  snapshot: Parameters<typeof canUseEngineWorkbench>[0];
   onBack: () => void;
   onRetry: () => void;
 }) {
+  const canUseWorkbench = canUseEngineWorkbench(snapshot);
+
   return (
     <Detail
       navigationTitle={commandTitle}
       markdown={buildFailureMarkdown(commandTitle, failure)}
       metadata={buildFailureMetadata(failure)}
       actions={
-        <NoesisActionPanel hideDashboardAction>
-          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onBack} />
+        <NoesisActionPanel hideDashboardAction snapshot={snapshot}>
+          <Action title="Edit Inputs" icon={goldIcon(Icon.Pencil)} onAction={onBack} />
           <Action
             title={`Retry ${commandTitle}`}
-            icon={Icon.RotateClockwise}
+            icon={goldIcon(Icon.RotateClockwise)}
             onAction={onRetry}
           />
           <Action.CopyToClipboard
             title="Copy Error"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={failure.message}
           />
-          {failure.requestJson ? (
+          {canUseWorkbench && failure.requestJson ? (
             <Action.CopyToClipboard
               title="Copy Request JSON"
-              icon={Icon.Document}
+              icon={mutedIcon(Icon.Document)}
               content={failure.requestJson}
             />
           ) : null}
@@ -564,12 +589,6 @@ async function resolveExecutionConfig() {
   const storedConfig = await getStoredConfig();
   if (storedConfig) {
     return storedConfig;
-  }
-
-  if (getExecutionRoutePreference() !== "witness") {
-    throw new Error(
-      "This ritual now runs through workflow execution. Add an API key or switch Execution Route to Witness.",
-    );
   }
 
   return {
@@ -643,11 +662,11 @@ function buildOverviewMarkdown({
   values: DailyWitnessFormValues;
 }) {
   return [
-    `# ${commandTitle}`,
+    cosmicHeader(commandTitle),
     "",
     "One-tap ritual flow first. Shared defaults resolve the workflow and route up front, while manual input edits stay available behind Edit Inputs.",
     "",
-    "## Ready to Run",
+    sacredSubheader("Ready to Run"),
     "",
     `- Workflow: ${workflowName}`,
     `- Workflow ID: ${workflowId}`,
@@ -655,7 +674,9 @@ function buildOverviewMarkdown({
     `- Context Quality: ${contextQuality.label}`,
     `- Context Note: ${contextQuality.summary}`,
     "",
-    "## Profile Defaults",
+    SECTION_DIVIDER,
+    "",
+    sacredSubheader("Ritual Defaults"),
     "",
     values.name ? `- Name: ${values.name}` : "- Name: Not set",
     values.birthDate
@@ -721,18 +742,18 @@ function buildFailureMarkdown(
   failure: DailyWitnessFailureState,
 ) {
   return [
-    `# ${commandTitle} Failed`,
+    cosmicHeader(`${commandTitle} Failed`),
     "",
     `Workflow: ${failure.workflowName}`,
     "",
     failure.message,
     "",
     failure.requestJson
-      ? ["## Request Payload", "", "```json", failure.requestJson, "```"].join(
+      ? [sacredSubheader("Request Payload"), "", "```json", failure.requestJson, "```"].join(
           "\n",
         )
       : [
-          "## Request Payload",
+          sacredSubheader("Request Payload"),
           "",
           "The request did not reach the API because local validation failed before submission.",
         ].join("\n"),

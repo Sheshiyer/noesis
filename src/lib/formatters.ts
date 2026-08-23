@@ -1,7 +1,14 @@
-import { Color } from "@raycast/api";
 import { DashboardSnapshot, RateLimitInfo, UsageWindowSummary } from "./types";
+import {
+  COLOR_SUCCESS,
+  COLOR_WARNING,
+  COLOR_ERROR,
+  COLOR_INFO,
+  COLOR_SELECTED,
+  COLOR_SECONDARY,
+} from "./design-tokens";
 
-export function getHealthColor(status: string): Color {
+export function getHealthColor(status: string): string {
   const normalized = status.toLowerCase();
 
   if (
@@ -9,28 +16,28 @@ export function getHealthColor(status: string): Color {
     normalized === "healthy" ||
     normalized === "ready"
   ) {
-    return Color.Green;
+    return COLOR_SUCCESS;
   }
 
   if (normalized === "degraded" || normalized === "warning") {
-    return Color.Yellow;
+    return COLOR_WARNING;
   }
 
-  return Color.Red;
+  return COLOR_ERROR;
 }
 
 export function getCacheColor(
   cacheState: DashboardSnapshot["cacheState"],
-): Color {
+): string {
   switch (cacheState) {
     case "fresh":
-      return Color.Green;
+      return COLOR_SUCCESS;
     case "stale":
-      return Color.Yellow;
+      return COLOR_WARNING;
     case "cached":
-      return Color.SecondaryText;
+      return COLOR_SECONDARY;
     default:
-      return Color.Red;
+      return COLOR_ERROR;
   }
 }
 
@@ -196,20 +203,20 @@ export function formatPhaseBadge(phase: number): string {
   return `P${phase}`;
 }
 
-export function getPhaseColor(phase: number): Color {
+export function getPhaseColor(phase: number): string {
   if (phase <= 0) {
-    return Color.SecondaryText;
+    return COLOR_SECONDARY;
   }
 
   if (phase === 1) {
-    return Color.Blue;
+    return COLOR_INFO;
   }
 
   if (phase === 2) {
-    return Color.Orange;
+    return COLOR_WARNING;
   }
 
-  return Color.Magenta;
+  return COLOR_SELECTED;
 }
 
 export function formatCount(

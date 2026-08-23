@@ -1,5 +1,6 @@
 import { LocalStorage, getPreferenceValues } from "@raycast/api";
 import {
+  ApiKeyStorageMode,
   ExecutionRouteTarget,
   PulseModeKind,
   SelemeneClientConfig,
@@ -11,14 +12,8 @@ const API_KEY_STORAGE_KEY = "noesis.apiKey";
 const BASE_URL_STORAGE_KEY = "noesis.baseUrl";
 export const DEFAULT_BASE_URL = "https://selemene.tryambakam.space";
 export const DEFAULT_PULSE_MODE: PulseModeKind = "nadabrahman";
-export const DEFAULT_EXECUTION_ROUTE: ExecutionRouteTarget = "witness";
+export const DEFAULT_EXECUTION_ROUTE: ExecutionRouteTarget = "selemene";
 export const DEFAULT_READING_HISTORY_LIMIT = 50;
-
-export type ApiKeyStorageMode =
-  | "preference"
-  | "localStorage"
-  | "environment"
-  | "none";
 
 export function getConfiguredPreferences(): SelemenePreferences {
   return getPreferenceValues<SelemenePreferences>();
@@ -100,6 +95,14 @@ export function getExecutionRoutePreference(): ExecutionRouteTarget {
     ""
   ).trim();
   return normalizeExecutionRoute(override || preferences.executionRoute);
+}
+
+export function getEffectiveExecutionRoute(
+  requested: ExecutionRouteTarget,
+  hasAccessKey: boolean,
+): ExecutionRouteTarget {
+  void hasAccessKey;
+  return requested;
 }
 
 export function getReadingHistoryLimitPreference(): number {

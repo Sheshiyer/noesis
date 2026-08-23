@@ -8,6 +8,16 @@ import {
   showToast,
   Toast,
 } from "@raycast/api";
+import {
+  cosmicHeader,
+  sacredSubheader,
+  SECTION_DIVIDER,
+  goldIcon,
+  emeraldIcon,
+  indigoIcon,
+  violetIcon,
+  mutedIcon,
+} from "../lib/design-tokens";
 import { calculateTarot } from "../lib/api";
 import { NoesisActionPanel } from "./noesis-actions";
 import { calculateEngine, executeWorkflow } from "../lib/api";
@@ -83,8 +93,9 @@ export function EngineExecutionForm({
     if (!config) {
       await showToast({
         style: Toast.Style.Failure,
-        title: "No Selemene Engine API key",
-        message: "Run API Key before executing readings.",
+        title: "Operator access required",
+        message:
+          "Daily Ritual still works through Witness. Add an access key to run direct engine readings.",
       });
       return;
     }
@@ -201,8 +212,9 @@ export function WorkflowExecutionForm({
     if (!config) {
       await showToast({
         style: Toast.Style.Failure,
-        title: "No Selemene Engine API key",
-        message: "Run API Key before executing workflows.",
+        title: "Operator access required",
+        message:
+          "Daily Ritual still works through Witness. Add an access key to run direct workflows.",
       });
       return;
     }
@@ -322,27 +334,27 @@ function ExecutionSuccessDetail({
       metadata={metadata}
       actions={
         <NoesisActionPanel>
-          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onEdit} />
+          <Action title="Edit Inputs" icon={goldIcon(Icon.Pencil)} onAction={onEdit} />
           <Action
             title="Run Again"
-            icon={Icon.RotateClockwise}
+            icon={goldIcon(Icon.RotateClockwise)}
             onAction={onRetry}
           />
           <Action
             title="Open Readings"
-            icon={Icon.Book}
+            icon={goldIcon(Icon.Book)}
             onAction={() => openCommand("readings")}
           />
           {requestJson ? (
             <Action.CopyToClipboard
               title="Copy Request JSON"
-              icon={Icon.Document}
+              icon={mutedIcon(Icon.Document)}
               content={requestJson}
             />
           ) : null}
           <Action.CopyToClipboard
             title="Copy Raw Result JSON"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={rawJson}
           />
         </NoesisActionPanel>
@@ -367,21 +379,21 @@ function ExecutionFailureDetail({
       metadata={buildFailureMetadata(failure)}
       actions={
         <NoesisActionPanel>
-          <Action title="Edit Inputs" icon={Icon.Pencil} onAction={onEdit} />
+          <Action title="Edit Inputs" icon={goldIcon(Icon.Pencil)} onAction={onEdit} />
           <Action
             title="Retry Run"
-            icon={Icon.RotateClockwise}
+            icon={goldIcon(Icon.RotateClockwise)}
             onAction={onRetry}
           />
           <Action.CopyToClipboard
             title="Copy Error"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             content={failure.message}
           />
           {failure.requestJson ? (
             <Action.CopyToClipboard
               title="Copy Request JSON"
-              icon={Icon.Document}
+              icon={mutedIcon(Icon.Document)}
               content={failure.requestJson}
             />
           ) : null}
@@ -438,7 +450,7 @@ function ExecutionForm({
         <NoesisActionPanel>
           <Action.SubmitForm
             title={submitTitle}
-            icon={Icon.Play}
+            icon={goldIcon(Icon.Play)}
             onSubmit={() =>
               onSubmit({
                 name,
@@ -458,7 +470,7 @@ function ExecutionForm({
           />
           <Action
             title="Copy Current Options JSON"
-            icon={Icon.Clipboard}
+            icon={mutedIcon(Icon.Clipboard)}
             onAction={() => Clipboard.copy(optionsJson)}
           />
         </NoesisActionPanel>
@@ -728,16 +740,16 @@ function buildWorkflowResultMetadata(result: WorkflowExecutionResult) {
 
 function buildFailureMarkdown(failure: ExecutionFailureState) {
   return [
-    `# ${failure.title}`,
+    cosmicHeader(failure.title),
     "",
     failure.message,
     "",
     failure.requestJson
-      ? ["## Request Payload", "", "```json", failure.requestJson, "```"].join(
+      ? [sacredSubheader("Request Payload"), "", "```json", failure.requestJson, "```"].join(
           "\n",
         )
       : [
-          "## Request Payload",
+          sacredSubheader("Request Payload"),
           "",
           "The request did not reach the API because local validation failed before submission.",
         ].join("\n"),

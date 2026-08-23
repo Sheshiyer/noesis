@@ -1,6 +1,22 @@
 import React from "react";
-import { Action, Color, Icon, List } from "@raycast/api";
+import { Action, Icon, List } from "@raycast/api";
+import {
+  COLOR_SUCCESS,
+  COLOR_WARNING,
+  COLOR_SECONDARY,
+  cosmicHeader,
+  sacredSubheader,
+  SECTION_DIVIDER,
+  goldIcon,
+  emeraldIcon,
+  indigoIcon,
+  violetIcon,
+  mutedIcon,
+  redIcon,
+} from "./lib/design-tokens";
+import { WorkbenchAccessGate } from "./components/access-gate";
 import { NoesisActionPanel } from "./components/noesis-actions";
+import { canUseEngineWorkbench } from "./lib/access";
 import {
   formatAbsoluteTime,
   formatCompactCount,
@@ -23,13 +39,29 @@ export default function DeveloperTools() {
   const executionRouteLabel =
     executionRoute === "witness" ? "Witness Gateway" : "Selemene Direct";
 
+  if (snapshot && !canUseEngineWorkbench(snapshot)) {
+    return (
+      <WorkbenchAccessGate
+        feature="Developer Tools"
+        isLoading={isLoading}
+        onRefresh={reload}
+      />
+    );
+  }
+
   if (error && !snapshot) {
     return (
       <List navigationTitle="Developer Tools">
         <List.Item
           title="Unable to load Developer Tools"
           subtitle={error}
-          actions={<NoesisActionPanel onRefresh={reload} hideDashboardAction />}
+          actions={
+            <NoesisActionPanel
+              onRefresh={reload}
+              hideDashboardAction
+              snapshot={snapshot}
+            />
+          }
         />
       </List>
     );
@@ -48,12 +80,12 @@ export default function DeveloperTools() {
             icon={{
               source: snapshot.hasCredentials ? Icon.Globe : Icon.Key,
               tintColor: snapshot.syncError
-                ? Color.Orange
+                ? COLOR_WARNING
                 : snapshot.health
                   ? getHealthColor(snapshot.health.status)
                   : snapshot.hasCredentials
-                    ? Color.Green
-                    : Color.SecondaryText,
+                    ? COLOR_SUCCESS
+                    : COLOR_SECONDARY,
             }}
             title={
               snapshot.hasCredentials
@@ -76,8 +108,8 @@ export default function DeveloperTools() {
                   color: snapshot.hasCredentials
                     ? snapshot.health
                       ? getHealthColor(snapshot.health.status)
-                      : Color.Green
-                    : Color.Orange,
+                      : COLOR_SUCCESS
+                    : COLOR_WARNING,
                 },
               },
               {
@@ -88,15 +120,18 @@ export default function DeveloperTools() {
             detail={
               <List.Item.Detail
                 markdown={[
-                  "# Connection & Routing",
+                  cosmicHeader("Connection & Routing"),
                   "",
                   snapshot.hasCredentials
-                    ? "Live sync is active. Profile, catalog, and reading refreshes can pull directly from the current Noesis backend."
-                    : "No live key is connected. These ritual surfaces are operating from the local cache until the API Key command reconnects the backend.",
+                    ? "Operator sync is active. Profile, catalog, and reading refreshes can pull directly from the current Noesis service."
+                    : "No access key is connected. Daily Ritual and Pulse & Remedy can still use local ritual defaults through Witness mode.",
                   "",
                   `- Base URL: \`${snapshot.baseUrl}\``,
                   `- Access: ${snapshot.hasCredentials ? "API key connected" : "Cache only"}`,
                   `- Engine and workflow route: ${executionRouteLabel}`,
+                  "",
+                  "Note: Witness Gateway does not forward your Selemene key for engine calculations (e.g. current raga remedy).",
+                  "For key-protected personal remedies in the tray, use 'Selemene Direct'.",
                   snapshot.health
                     ? `- Service: ${snapshot.health.status}`
                     : "- Service: No live health snapshot cached",
@@ -115,8 +150,8 @@ export default function DeveloperTools() {
                     : "- Sync issue: None",
                   ...(snapshot.syncIssues.length > 0
                     ? [
-                        "",
-                        "## Sync Issues",
+                        SECTION_DIVIDER,
+                        sacredSubheader("Sync Issues"),
                         "",
                         ...snapshot.syncIssues
                           .slice(0, 6)
@@ -131,6 +166,7 @@ export default function DeveloperTools() {
             }
             actions={
               <NoesisActionPanel
+                snapshot={snapshot}
                 onRefresh={reload}
                 hideDashboardAction
                 refreshTitle="Refresh Developer Tools"
@@ -141,14 +177,14 @@ export default function DeveloperTools() {
                       ? "Edit Access Key"
                       : "Connect Access Key"
                   }
-                  icon={Icon.Key}
+                  icon={goldIcon(Icon.Key)}
                   onAction={() => openCommand("api-key")}
                 />
               </NoesisActionPanel>
             }
           />
           <List.Item
-            icon={Icon.BarChart}
+            icon={goldIcon(Icon.BarChart)}
             title="Usage & Limits"
             accessories={[
               {
@@ -171,7 +207,7 @@ export default function DeveloperTools() {
             detail={
               <List.Item.Detail
                 markdown={[
-                  "# Usage & Limits",
+                  cosmicHeader("Usage & Limits"),
                   "",
                   snapshot.usage
                     ? "Current request volume and engine distribution from the cached usage window."
@@ -198,18 +234,19 @@ export default function DeveloperTools() {
             }
             actions={
               <NoesisActionPanel
+                snapshot={snapshot}
                 onRefresh={reload}
                 hideDashboardAction
                 refreshTitle="Refresh Developer Tools"
               >
                 <Action
                   title="Open Readings"
-                  icon={Icon.Book}
+                  icon={goldIcon(Icon.Book)}
                   onAction={() => openCommand("readings")}
                 />
                 <Action
                   title="Open Workflows"
-                  icon={Icon.Network}
+                  icon={violetIcon(Icon.Network)}
                   onAction={() => openCommand("workflows")}
                 />
               </NoesisActionPanel>
@@ -239,7 +276,7 @@ export default function DeveloperTools() {
             detail={
               <List.Item.Detail
                 markdown={[
-                  "# Cache & Sync",
+                  cosmicHeader("Cache & Sync"),
                   "",
                   snapshot.syncError ??
                     "The local sqlite cache is active and serving command data first.",
@@ -257,13 +294,14 @@ export default function DeveloperTools() {
             }
             actions={
               <NoesisActionPanel
+                snapshot={snapshot}
                 onRefresh={reload}
                 hideDashboardAction
                 refreshTitle="Refresh Developer Tools"
               >
                 <Action
                   title="Open Dashboard"
-                  icon={Icon.AppWindow}
+                  icon={indigoIcon(Icon.AppWindow)}
                   onAction={() => openCommand("dashboard")}
                 />
               </NoesisActionPanel>
@@ -271,7 +309,7 @@ export default function DeveloperTools() {
           />
           {snapshot.syncIssues.length > 0 ? (
             <List.Item
-              icon={Icon.ExclamationMark}
+              icon={redIcon(Icon.ExclamationMark)}
               title="Sync Issues"
               subtitle={truncate(
                 snapshot.syncIssues
@@ -289,7 +327,7 @@ export default function DeveloperTools() {
               detail={
                 <List.Item.Detail
                   markdown={[
-                    "# Sync Issues",
+                    cosmicHeader("Sync Issues"),
                     "",
                     ...snapshot.syncIssues.map(
                       (issue) =>
