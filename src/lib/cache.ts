@@ -14,6 +14,7 @@ import {
   UserProfileSnapshot,
   WorkflowSummary,
 } from "./types";
+import { normalizeAvailability } from "./api";
 
 const SQLITE_BINARY = fs.existsSync("/usr/bin/sqlite3")
   ? "/usr/bin/sqlite3"
@@ -64,6 +65,7 @@ CREATE TABLE IF NOT EXISTS engines (
   engine_id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   required_phase INTEGER NOT NULL,
+  availability TEXT,
   fetched_at TEXT NOT NULL
 ) STRICT;
 
@@ -211,6 +213,19 @@ function ensureSchema(database: SqliteDatabase): void {
   if (!hasMenuBarInsights) {
     database.exec(SCHEMA);
   }
+
+  ensureEngineAvailabilityColumn(database);
+}
+
+// Caches created before contract-v1 capabilities lack engines.availability.
+function ensureEngineAvailabilityColumn(database: SqliteDatabase): void {
+  const hasAvailability = database.get<{ name: string }>(`
+    SELECT name FROM pragma_table_info('engines') WHERE name = 'availability';
+  `);
+
+  if (!hasAvailability) {
+    database.exec("ALTER TABLE engines ADD COLUMN availability TEXT;");
+  }
 }
 
 function readSnapshot(
@@ -260,9 +275,10 @@ function readSnapshot(
     engine_id: string;
     name: string;
     required_phase: number;
+    availability: string | null;
     fetched_at: string;
   }>(`
-    SELECT engine_id, name, required_phase, fetched_at
+    SELECT engine_id, name, required_phase, availability, fetched_at
     FROM engines
     ORDER BY required_phase ASC, name ASC;
   `);
@@ -340,6 +356,11 @@ function readSnapshot(
     id: engine.engine_id,
     name: engine.name,
     requiredPhase: engine.required_phase,
+    // null means capabilities were never reported for this engine.
+    availability:
+      engine.availability === null
+        ? undefined
+        : normalizeAvailability(engine.availability),
     fetchedAt: engine.fetched_at,
   }));
 
@@ -543,16 +564,18 @@ function saveRemoteSnapshot(
     statements.push("DELETE FROM engines;");
     for (const engine of snapshot.engines) {
       statements.push(`
-        INSERT INTO engines (engine_id, name, required_phase, fetched_at)
+        INSERT INTO engines (engine_id, name, required_phase, availability, fetched_at)
         VALUES (
           ${sqlLiteral(engine.id)},
           ${sqlLiteral(engine.name)},
           ${sqlLiteral(engine.requiredPhase)},
+          ${sqlLiteral(engine.availability ?? null)},
           ${sqlLiteral(engine.fetchedAt ?? snapshot.fetchedAt)}
         )
         ON CONFLICT(engine_id) DO UPDATE SET
           name = excluded.name,
           required_phase = excluded.required_phase,
+          availability = excluded.availability,
           fetched_at = excluded.fetched_at;
       `);
     }

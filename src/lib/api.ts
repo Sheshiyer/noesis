@@ -1,4 +1,7 @@
 import {
+  CapabilityAvailability,
+  EngineCapability,
+  EngineProvenance,
   ExecutionRouteInfo,
   ExecutionRouteTarget,
   EngineExecutionInput,
@@ -9,6 +12,7 @@ import {
   ReadingStat,
   ReadingSummary,
   RemoteSnapshot,
+  RuntimeKind,
   SelemeneClientConfig,
   TarotExecutionOptions,
   TarotSpreadVariant,
@@ -251,6 +255,7 @@ export async function fetchRemoteSnapshot(
   let health: HealthSnapshot | undefined;
   let workflows: WorkflowSummary[] | undefined;
   let engines: EngineSummary[] | undefined;
+  let capabilities: EngineCapability[] = [];
 
   if (includeService || includeCatalog) {
     const [healthResponse, statusResponse] = await Promise.all([
@@ -289,8 +294,24 @@ export async function fetchRemoteSnapshot(
         }),
       );
 
+      const capabilityResponse = await optionalRequest(
+        "capabilities",
+        "selemene",
+        () => client.getCapabilities(),
+      );
+      if (capabilityResponse.issue) {
+        syncIssues.push(capabilityResponse.issue);
+      }
+      capabilities = capabilityResponse.value ?? [];
+      const availabilityById = new Map(
+        capabilities.map((row) => [row.engineId, row.availability]),
+      );
+
       workflows = workflowInfos;
-      engines = engineInfos;
+      engines = engineInfos.map((engine) => {
+        const availability = availabilityById.get(engine.id);
+        return availability ? { ...engine, availability } : engine;
+      });
     }
   }
 
@@ -340,6 +361,7 @@ export async function fetchRemoteSnapshot(
       : undefined,
     workflows,
     engines,
+    capabilities,
     readings: readingsResponse.value
       ? toReadingSummaries(
           readingsResponse.value,
@@ -434,7 +456,7 @@ export async function updateUserProfile(
   return toUserProfile(response, new Date().toISOString());
 }
 
-class SelemeneApiClient {
+export class SelemeneApiClient {
   public rateLimitInfo: RateLimitInfo = {};
   private readonly baseUrl: string;
   private readonly apiKey: string;
@@ -494,6 +516,25 @@ class SelemeneApiClient {
     );
   }
 
+  async getCapabilities(): Promise<EngineCapability[]> {
+    try {
+      const body = await this.requestRaw<{
+        capabilities?: Array<Record<string, unknown>>;
+      }>("/api/v1/engines/capabilities");
+      return (body.capabilities ?? []).map(toEngineCapability);
+    } catch (error) {
+      // Older Selemene deployments do not expose the capabilities route yet.
+      if (
+        error instanceof JsonRequestError &&
+        error.kind === "http" &&
+        error.status === 404
+      ) {
+        return [];
+      }
+      throw normalizeSelemeneError(error);
+    }
+  }
+
   calculateEngine(
     engineId: string,
     input: EngineExecutionInput,
@@ -549,27 +590,36 @@ class SelemeneApiClient {
     context: RequestContext = { auth: true },
   ): Promise<T> {
     try {
-      const response = await requestJson<T>({
-        target: "selemene",
-        baseUrl: this.baseUrl,
-        path,
-        method: init.method ?? "GET",
-        headers: init.headers,
-        body: typeof init.body === "string" ? init.body : undefined,
-        authHeader:
-          context.auth === false
-            ? undefined
-            : {
-                name: "X-API-Key",
-                value: this.apiKey,
-              },
-        fetchImpl: this.fetchImpl,
-      });
-      this.captureRateLimit(response.headers);
-      return response.payload;
+      return await this.requestRaw<T>(path, init, context);
     } catch (error) {
       throw normalizeSelemeneError(error);
     }
+  }
+
+  /** Transport call that leaves `JsonRequestError` un-normalized for callers that branch on status. */
+  private async requestRaw<T>(
+    path: string,
+    init: RequestInit = { method: "GET" },
+    context: RequestContext = { auth: true },
+  ): Promise<T> {
+    const response = await requestJson<T>({
+      target: "selemene",
+      baseUrl: this.baseUrl,
+      path,
+      method: init.method ?? "GET",
+      headers: init.headers,
+      body: typeof init.body === "string" ? init.body : undefined,
+      authHeader:
+        context.auth === false
+          ? undefined
+          : {
+              name: "X-API-Key",
+              value: this.apiKey,
+            },
+      fetchImpl: this.fetchImpl,
+    });
+    this.captureRateLimit(response.headers);
+    return response.payload;
   }
 
   private captureRateLimit(headers: Headers): void {
@@ -775,6 +825,38 @@ function toWorkflowSummary(
   };
 }
 
+const AVAILABILITY: readonly CapabilityAvailability[] = [
+  "declared",
+  "available",
+  "degraded",
+  "unavailable",
+];
+
+export function normalizeAvailability(value: unknown): CapabilityAvailability {
+  return AVAILABILITY.includes(value as CapabilityAvailability)
+    ? (value as CapabilityAvailability)
+    : "declared";
+}
+
+function toEngineCapability(row: Record<string, unknown>): EngineCapability {
+  return {
+    contractVersion: "v1",
+    engineId: String(row.engine_id),
+    displayName: String(row.display_name ?? row.engine_id),
+    availability: normalizeAvailability(row.availability),
+    runtimeKind: (row.runtime_kind as RuntimeKind | undefined) ?? "native",
+    dependencies: Array.isArray(row.dependencies)
+      ? (row.dependencies as string[])
+      : [],
+    requiredPhase:
+      typeof row.required_phase === "number" ? row.required_phase : undefined,
+    implementationVersion:
+      typeof row.implementation_version === "string"
+        ? row.implementation_version
+        : undefined,
+  };
+}
+
 function toEngineSummary(
   engineId: string,
   info: EngineInfoResponse | undefined,
@@ -854,7 +936,7 @@ function toReadingStats(
   }));
 }
 
-function toEngineExecutionResult(
+export function toEngineExecutionResult(
   payload: Record<string, unknown>,
   route?: ExecutionRouteInfo,
 ): EngineExecutionResult {
@@ -870,6 +952,7 @@ function toEngineExecutionResult(
     metadata: asRecord(payload.metadata),
     timestamp: readString(payload, "timestamp"),
     route,
+    provenance: payload.provenance as EngineProvenance | undefined,
     raw: payload,
   };
 }
