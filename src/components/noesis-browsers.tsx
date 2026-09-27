@@ -8,11 +8,8 @@ import {
   COLOR_SELECTED,
   cosmicHeader,
   sacredSubheader,
-  SECTION_DIVIDER,
   goldIcon,
-  emeraldIcon,
   indigoIcon,
-  violetIcon,
   mutedIcon,
 } from "../lib/design-tokens";
 import { EngineExecutionForm, WorkflowExecutionForm } from "./execution-forms";
