@@ -1,5 +1,5 @@
 import React from "react";
-import { Action, Detail, Icon, List } from "@raycast/api";
+import { Action, Color, Detail, Icon, List } from "@raycast/api";
 import {
   COLOR_ERROR,
   COLOR_INFO,
@@ -131,6 +131,13 @@ export function EnginesBrowser(props: BrowserProps) {
                       color: getPhaseColor(engine.requiredPhase),
                     },
                     tooltip: formatPhaseLabel(engine.requiredPhase),
+                  },
+                  {
+                    tag: {
+                      value: engine.availability ?? "declared",
+                      color: getAvailabilityColor(engine.availability),
+                    },
+                    tooltip: "Contract-v1 availability",
                   },
                   {
                     text: formatCompactCount(readingCount, "R"),
@@ -646,6 +653,18 @@ export function ReadingDetailView({
       }
     />
   );
+}
+
+function getAvailabilityColor(
+  availability: EngineSummary["availability"],
+): Color {
+  return availability === "available"
+    ? Color.Green
+    : availability === "degraded"
+      ? Color.Orange
+      : availability === "unavailable"
+        ? Color.Red
+        : Color.SecondaryText;
 }
 
 function useResolvedSnapshot(props: BrowserProps) {
