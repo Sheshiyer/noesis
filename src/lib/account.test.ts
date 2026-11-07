@@ -169,10 +169,15 @@ test("sign-out revokes before clearing tokens and account drafts", async () => {
 
 test("email verification rejects off-origin and wrong-path redirects", () => {
   expect(
+    verifiedEmailURL(base, "/api/v1/account/email-links/begin?challenge=test"),
+  ).toBe(`${base}/api/v1/account/email-links/begin?challenge=test`);
+  expect(
     verifiedEmailURL(base, "/api/v1/account/email-links/verify?challenge=test"),
   ).toBe(`${base}/api/v1/account/email-links/verify?challenge=test`);
   for (const url of [
     "https://evil.test/api/v1/account/email-links/verify?challenge=x",
+    "https://evil.test/api/v1/account/email-links/begin?challenge=x",
+    "/api/v1/account/email-links/begin",
     "//evil.test/path",
     "/api/v1/sessions/authorize?challenge=x",
     "/api/v1/account/email-links/verify",
