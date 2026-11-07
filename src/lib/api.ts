@@ -386,7 +386,7 @@ export async function calculateEngine(
 ): Promise<EngineExecutionResult> {
   if (config.authMode === "account")
     throw new Error(
-      "Account calculations await the subject-scoped engine contract. Your selected profile is not submitted to the operator route.",
+      "Open Account and choose Calculate for This Subject to use accepted profile inputs. Operator calculation routes are separate.",
     );
   const route = await resolveExecutionRoute(config);
   if (route.target === "witness") {
@@ -442,7 +442,7 @@ export async function executeWorkflow(
 ): Promise<WorkflowExecutionResult> {
   if (config.authMode === "account")
     throw new Error(
-      "Account calculations await the subject-scoped engine contract. Your selected profile is not submitted to the operator route.",
+      "Account workflows await a subject-scoped workflow endpoint. Individual engines are available from Account with a calculation grant.",
     );
   const route = await resolveExecutionRoute(config);
   if (route.target === "witness") {
