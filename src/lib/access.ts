@@ -76,7 +76,11 @@ export function canUseEngineWorkbench(
 }
 
 export function getAccessModeLabel(access: AccessContext): string {
-  return access.mode === "admin" ? "Operator" : "Witness";
+  return access.mode === "account"
+    ? "Account"
+    : access.mode === "admin"
+      ? "Operator"
+      : "Witness";
 }
 
 export function buildWorkbenchGateMarkdown(feature = "Engine Workbench") {

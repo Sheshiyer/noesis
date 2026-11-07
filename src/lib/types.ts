@@ -23,7 +23,7 @@ export type ApiKeyStorageMode =
   | "environment"
   | "none";
 
-export type AccessMode = "admin" | "witness";
+export type AccessMode = "admin" | "witness" | "account";
 
 export interface AccessContext {
   mode: AccessMode;
