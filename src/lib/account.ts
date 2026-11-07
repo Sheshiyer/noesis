@@ -21,6 +21,7 @@ export interface AccountContext {
     display_name: string;
     can_read: boolean;
     can_edit: boolean;
+    can_calculate?: boolean;
     profile_revision: number;
   }[];
   relationships: {
@@ -175,4 +176,126 @@ export async function currentAccountScope(): Promise<string | null> {
   return scopeHash(
     `${baseUrl}:${context.account.id}:${context.default_subject_id ?? "none"}`,
   );
+}
+
+export interface SubjectReading {
+  id: string;
+  subject_id: string;
+  actor_account_id: string;
+  profile_revision: number;
+  engine_id?: string;
+  created_at?: string;
+  result?: Record<string, unknown>;
+}
+export function verifiedEmailURL(
+  baseUrl: string,
+  verificationPath: string,
+): string {
+  const base = new URL(baseUrl);
+  const url = new URL(verificationPath, base);
+  if (
+    base.protocol !== "https:" ||
+    url.origin !== base.origin ||
+    url.pathname !== "/api/v1/account/email-links/verify" ||
+    url.username ||
+    url.password ||
+    !url.searchParams.get("challenge") ||
+    url.hash
+  ) {
+    throw new Error("Invalid email verification destination.");
+  }
+  return url.href;
+}
+export async function startEmailLink(
+  baseUrl: string,
+  email: string,
+): Promise<string> {
+  const result = await accountRequest<{
+    status: string;
+    verification_path: string;
+  }>(baseUrl, "/api/v1/account/email-links", "POST", { email });
+  if (result.status !== "pending_verification")
+    throw new Error("Email link did not enter pending verification.");
+  return verifiedEmailURL(baseUrl, result.verification_path);
+}
+export async function calculateForSubject(
+  baseUrl: string,
+  resource: SubjectProfile,
+  engineId: string,
+  options: Record<string, unknown>,
+  currentTime?: string,
+): Promise<SubjectReading> {
+  const context = await getAccountContext(baseUrl);
+  if (
+    !context.subjects.some(
+      (subject) =>
+        subject.id === resource.subject_id &&
+        subject.can_read &&
+        subject.can_calculate === true,
+    )
+  )
+    throw new Error("This subject has no calculation grant.");
+  if (!/^[a-z][a-z0-9-]{0,79}$/.test(engineId))
+    throw new Error("Choose a valid engine ID.");
+  if (
+    Object.keys(options).some(
+      (key) =>
+        key.startsWith("_") ||
+        [
+          "auth",
+          "user_id",
+          "subject_id",
+          "consciousness_level",
+          "birth_data",
+        ].includes(key),
+    )
+  )
+    throw new Error("Options cannot override identity or accepted birth data.");
+  if (currentTime && !Number.isFinite(Date.parse(currentTime)))
+    throw new Error("Current time must be a valid timestamp.");
+  const result = await accountRequest<SubjectReading>(
+    baseUrl,
+    `/api/v1/subjects/${encodeURIComponent(resource.subject_id)}/engines/${engineId}/calculate`,
+    "POST",
+    {
+      expected_revision: resource.revision,
+      options,
+      ...(currentTime
+        ? { current_time: new Date(currentTime).toISOString() }
+        : {}),
+    },
+  );
+  if (
+    result.subject_id !== resource.subject_id ||
+    result.profile_revision !== resource.revision
+  )
+    throw new Error(
+      "Calculation response does not match the selected subject revision.",
+    );
+  return result;
+}
+export async function subjectReadings(
+  baseUrl: string,
+  subjectId: string,
+): Promise<SubjectReading[]> {
+  const result = await accountRequest<{ readings: SubjectReading[] }>(
+    baseUrl,
+    `/api/v1/subjects/${encodeURIComponent(subjectId)}/readings`,
+  );
+  if (result.readings.some((row) => row.subject_id !== subjectId))
+    throw new Error("Reading list contains an unexpected subject.");
+  return result.readings;
+}
+export async function subjectReading(
+  baseUrl: string,
+  subjectId: string,
+  readingId: string,
+): Promise<SubjectReading> {
+  const result = await accountRequest<SubjectReading>(
+    baseUrl,
+    `/api/v1/subjects/${encodeURIComponent(subjectId)}/readings/${encodeURIComponent(readingId)}`,
+  );
+  if (result.subject_id !== subjectId || result.id !== readingId)
+    throw new Error("Reading does not match the selected subject.");
+  return result;
 }

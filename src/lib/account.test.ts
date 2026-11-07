@@ -3,6 +3,9 @@ import { LocalStorage, OAuth } from "@raycast/api";
 import { getAccountToken, scopeHash, signOut } from "./account-session";
 import {
   accountRequest,
+  verifiedEmailURL,
+  calculateForSubject,
+  subjectReadings,
   getSubjectProfile,
   saveSubjectProfile,
   SubjectProfile,
@@ -111,7 +114,7 @@ test("human calculations do not leak into the operator calculation route", async
         return Response.json({});
       }) as typeof fetch,
     ),
-  ).rejects.toThrow("subject-scoped");
+  ).rejects.toThrow("Open Account");
   expect(called).toBe(false);
 });
 test("API client obtains a fresh bearer for each request", async () => {
@@ -162,4 +165,68 @@ test("sign-out revokes before clearing tokens and account drafts", async () => {
   await signOut(base);
   expect(await pkce.getTokens()).toBeUndefined();
   expect(await LocalStorage.getItem("noesis.account.example.draft")).toBeNull();
+});
+
+test("email verification rejects off-origin and wrong-path redirects", () => {
+  expect(
+    verifiedEmailURL(base, "/api/v1/account/email-links/verify?challenge=test"),
+  ).toBe(`${base}/api/v1/account/email-links/verify?challenge=test`);
+  for (const url of [
+    "https://evil.test/api/v1/account/email-links/verify?challenge=x",
+    "//evil.test/path",
+    "/api/v1/sessions/authorize?challenge=x",
+    "/api/v1/account/email-links/verify",
+  ])
+    expect(() => verifiedEmailURL(base, url)).toThrow("Invalid email");
+});
+test("subject engine sends accepted revision and explicit options only", async () => {
+  await session();
+  let body: Record<string, unknown> = {};
+  globalThis.fetch = (async (url, init) => {
+    if (String(url).endsWith("/context"))
+      return Response.json({
+        subjects: [
+          { id: resource.subject_id, can_read: true, can_calculate: true },
+        ],
+      });
+    body = JSON.parse(String(init?.body));
+    expect(String(url)).toEndWith(
+      `/subjects/${resource.subject_id}/engines/tarot/calculate`,
+    );
+    return Response.json({
+      id: "run",
+      subject_id: resource.subject_id,
+      profile_revision: resource.revision,
+    });
+  }) as typeof fetch;
+  await calculateForSubject(base, resource, "tarot", {
+    question: "What can I notice?",
+  });
+  expect(body).toEqual({
+    expected_revision: 3,
+    options: { question: "What can I notice?" },
+  });
+  await expect(
+    calculateForSubject(base, resource, "tarot", { birth_data: {} }),
+  ).rejects.toThrow("override");
+});
+test("read access does not imply calculation access", async () => {
+  await session();
+  globalThis.fetch = (async () =>
+    Response.json({
+      subjects: [{ id: resource.subject_id, can_read: true, can_edit: true }],
+    })) as typeof fetch;
+  await expect(
+    calculateForSubject(base, resource, "tarot", {}),
+  ).rejects.toThrow("no calculation grant");
+});
+test("history refuses a result from another subject", async () => {
+  await session();
+  globalThis.fetch = (async () =>
+    Response.json({
+      readings: [{ id: "run", subject_id: "wrong" }],
+    })) as typeof fetch;
+  await expect(subjectReadings(base, resource.subject_id)).rejects.toThrow(
+    "unexpected subject",
+  );
 });

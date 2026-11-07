@@ -1,3 +1,8 @@
+import {
+  EmailLinkForm,
+  SubjectEngineForm,
+  SubjectReadings,
+} from "./components/account-actions";
 import React, { useEffect, useState } from "react";
 import { Action, ActionPanel, List, showToast, Toast } from "@raycast/api";
 import { getStoredBaseUrl } from "./lib/settings";
@@ -139,6 +144,18 @@ export default function AccountCommand() {
         <>
           <List.Section title="Verified Account">
             <List.Item
+              title="Change Preferred Email"
+              subtitle="Pending until browser verification and fresh sign-in"
+              actions={
+                <ActionPanel>
+                  <Action.Push
+                    title="Verify Preferred Email"
+                    target={<EmailLinkForm baseUrl={baseUrl} />}
+                  />
+                </ActionPanel>
+              }
+            />
+            <List.Item
               title={context.account.preferred_email}
               subtitle="Verified preferred email"
               actions={actions}
@@ -164,6 +181,26 @@ export default function AccountCommand() {
                           />
                         }
                       />
+                      <Action.Push
+                        title="Read Subject History"
+                        target={
+                          <SubjectReadings
+                            baseUrl={baseUrl}
+                            subjectId={subject.id}
+                          />
+                        }
+                      />
+                      {subject.can_calculate === true && (
+                        <Action.Push
+                          title="Calculate for This Subject"
+                          target={
+                            <SubjectEngineForm
+                              baseUrl={baseUrl}
+                              subjectId={subject.id}
+                            />
+                          }
+                        />
+                      )}
                       <Action
                         title="Set Shared Default Subject"
                         onAction={() =>
