@@ -196,7 +196,10 @@ export function verifiedEmailURL(
   if (
     base.protocol !== "https:" ||
     url.origin !== base.origin ||
-    url.pathname !== "/api/v1/account/email-links/verify" ||
+    ![
+      "/api/v1/account/email-links/begin",
+      "/api/v1/account/email-links/verify",
+    ].includes(url.pathname) ||
     url.username ||
     url.password ||
     !url.searchParams.get("challenge") ||
