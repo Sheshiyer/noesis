@@ -108,7 +108,7 @@ export default function MenuBar() {
   }, [state?.insights.nadabrahman]);
 
   const handleClearCache = useCallback(async () => {
-    clearMenuBarCache();
+    await clearMenuBarCache();
     setRefreshKey((k) => k + 1);
     await showToast({
       title: "Cache cleared",
@@ -157,7 +157,11 @@ export default function MenuBar() {
   const noRemedyReason = !insights.nadabrahman
     ? (() => {
         if (!hasBirthData) {
-          return { icon: Icon.PersonCircle, tintColor: COLOR_SECONDARY, text: "No birth data in Profile" };
+          return {
+            icon: Icon.PersonCircle,
+            tintColor: COLOR_SECONDARY,
+            text: "No birth data in Profile",
+          };
         }
         if (nadabrahmanSyncIssue) {
           return {
@@ -170,7 +174,11 @@ export default function MenuBar() {
           insights.vedicClock || insights.biorhythm || insights.vimshottari,
         );
         if (!hasSourcePulses) {
-          return { icon: Icon.Clock, tintColor: COLOR_SECONDARY, text: "Waiting for pulse sources" };
+          return {
+            icon: Icon.Clock,
+            tintColor: COLOR_SECONDARY,
+            text: "Waiting for pulse sources",
+          };
         }
         if (canUseWorkbench && routeTarget !== "selemene") {
           const routeLabel =
@@ -212,7 +220,10 @@ export default function MenuBar() {
       {!insights.nadabrahman && noRemedyReason ? (
         <MenuBarExtra.Item
           title={formatLine("Status", noRemedyReason.text, 72)}
-          icon={{ source: noRemedyReason.icon, tintColor: noRemedyReason.tintColor }}
+          icon={{
+            source: noRemedyReason.icon,
+            tintColor: noRemedyReason.tintColor,
+          }}
         />
       ) : null}
       {nadabrahmanSyncIssue && !insights.nadabrahman ? (

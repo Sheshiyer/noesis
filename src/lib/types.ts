@@ -11,6 +11,8 @@ export interface SelemenePreferences {
 export interface SelemeneClientConfig {
   baseUrl: string;
   apiKey: string;
+  authMode?: "account" | "operator";
+  getAccessToken?: () => Promise<string>;
 }
 
 export type ExecutionRouteTarget = "selemene" | "witness";
