@@ -115,7 +115,7 @@ export async function syncDashboardSnapshot(
       readingStats: [],
       source: "live",
       access: {
-        mode: "witness",
+        mode: "account",
         hasAccessKey: false,
         apiKeyStorageMode: "none",
         requestedExecutionRoute: "selemene",
