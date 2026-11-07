@@ -28,6 +28,8 @@ type ExtensionPreferences = {
 declare type Preferences = ExtensionPreferences
 
 declare namespace Preferences {
+  /** Preferences accessible in the `account` command */
+  export type Account = ExtensionPreferences & {}
   /** Preferences accessible in the `dashboard` command */
   export type Dashboard = ExtensionPreferences & {}
   /** Preferences accessible in the `engines` command */
@@ -51,6 +53,8 @@ declare namespace Preferences {
 }
 
 declare namespace Arguments {
+  /** Arguments passed to the `account` command */
+  export type Account = {}
   /** Arguments passed to the `dashboard` command */
   export type Dashboard = {}
   /** Arguments passed to the `engines` command */

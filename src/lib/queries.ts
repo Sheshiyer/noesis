@@ -1,3 +1,9 @@
+import {
+  currentAccountScope,
+  getAccountContext,
+  getSubjectProfile,
+  profileSnapshot,
+} from "./account";
 import path from "node:path";
 import { environment } from "@raycast/api";
 import { calculateEngine, fetchRemoteSnapshot, normalizeBaseUrl } from "./api";
@@ -57,9 +63,10 @@ function withTimeout<T>(
 
 export async function readDashboardSnapshot(): Promise<DashboardSnapshot> {
   const config = await getStoredConfig();
+  if (config?.authMode === "account") return syncDashboardSnapshot();
   const baseUrl =
     config?.baseUrl ?? (await getStoredBaseUrl()) ?? DEFAULT_BASE_URL;
-  const repository = getCacheRepository();
+  const repository = await getCacheRepository();
   const snapshot = repository.readSnapshot(
     normalizeBaseUrl(baseUrl),
     Boolean(config),
@@ -69,7 +76,7 @@ export async function readDashboardSnapshot(): Promise<DashboardSnapshot> {
 
 export async function readMenuBarSnapshot(): Promise<MenuBarSnapshot> {
   const dashboard = await readDashboardSnapshot();
-  const repository = getCacheRepository();
+  const repository = await getCacheRepository();
 
   return {
     dashboard,
@@ -78,12 +85,12 @@ export async function readMenuBarSnapshot(): Promise<MenuBarSnapshot> {
   };
 }
 
-export function clearDashboardCache(): void {
-  getCacheRepository().clearAll();
+export async function clearDashboardCache(): Promise<void> {
+  (await getCacheRepository()).clearAll();
 }
 
-export function clearPersonalDataCache(): void {
-  getCacheRepository().clearPersonalData();
+export async function clearPersonalDataCache(): Promise<void> {
+  (await getCacheRepository()).clearPersonalData();
 }
 
 export async function syncDashboardSnapshot(
@@ -92,8 +99,33 @@ export async function syncDashboardSnapshot(
     configOverride?: SelemeneClientConfig;
   } = {},
 ): Promise<DashboardSnapshot> {
-  const repository = getCacheRepository();
+  const repository = await getCacheRepository();
   const config = options.configOverride ?? (await getStoredConfig());
+  if (config?.authMode === "account") {
+    const context = await getAccountContext(config.baseUrl);
+    const profile = context.default_subject_id
+      ? await getSubjectProfile(config.baseUrl, context.default_subject_id)
+      : null;
+    const snapshot = repository.readSnapshot(config.baseUrl, true);
+    return {
+      ...snapshot,
+      profile: profile ? profileSnapshot(profile, context) : undefined,
+      usage: undefined,
+      readings: [],
+      readingStats: [],
+      source: "live",
+      access: {
+        mode: "witness",
+        hasAccessKey: false,
+        apiKeyStorageMode: "none",
+        requestedExecutionRoute: "selemene",
+        effectiveExecutionRoute: "selemene",
+        canUseDailyRitual: true,
+        canUseAmbientCompanion: false,
+        canUseEngineWorkbench: false,
+      },
+    };
+  }
   const baseUrl =
     config?.baseUrl ?? (await getStoredBaseUrl()) ?? DEFAULT_BASE_URL;
   const cached = await decorateSnapshot(
@@ -176,7 +208,7 @@ export async function syncMenuBarInsights(options: {
   syncError?: string;
 }> {
   const runEngine = options.calculateEngine ?? calculateEngine;
-  const repository = getCacheRepository();
+  const repository = await getCacheRepository();
   const cachedInsights = mapMenuBarInsights(repository.readMenuBarInsights());
   const now = new Date();
 
@@ -316,12 +348,16 @@ export async function syncMenuBarSnapshot(
   return { dashboard, insights, syncIssues, syncError };
 }
 
-export function getCacheDatabasePath(): string {
-  return path.join(environment.supportPath, "noesis-cache.sqlite");
+export async function getCacheDatabasePath(): Promise<string> {
+  const scope = await currentAccountScope();
+  return path.join(
+    environment.supportPath,
+    scope ? `noesis-account-${scope}.sqlite` : "noesis-cache.sqlite",
+  );
 }
 
-function getCacheRepository() {
-  return createNoesisCacheRepository(getCacheDatabasePath(), {
+async function getCacheRepository() {
+  return createNoesisCacheRepository(await getCacheDatabasePath(), {
     readingHistoryLimit: getReadingHistoryLimitPreference(),
   });
 }

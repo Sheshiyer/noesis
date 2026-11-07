@@ -129,6 +129,12 @@
   ],
   "commands": [
     {
+      "name": "account",
+      "title": "Account",
+      "description": "Sign in to Selemene, select an allowed subject, and manage verified account defaults",
+      "mode": "view"
+    },
+    {
       "name": "dashboard",
       "title": "Dashboard",
       "description": "Daily Ritual cockpit for current pattern, pulse inputs, remedy signal, and authored next actions",

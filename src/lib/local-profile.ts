@@ -1,13 +1,19 @@
+import { currentAccountScope } from "./account";
 import { LocalStorage } from "@raycast/api";
 import { UserProfileSnapshot, UserProfileUpdate } from "./types";
 
 const LOCAL_PROFILE_STORAGE_KEY = "noesis.localRitualProfile";
+async function storageKey() {
+  const scope = await currentAccountScope();
+  return scope ? `noesis.account.${scope}.draft` : LOCAL_PROFILE_STORAGE_KEY;
+}
+
 const LOCAL_PROFILE_ID = "local-ritual-defaults";
 
 export async function readLocalProfileSnapshot(): Promise<
   UserProfileSnapshot | undefined
 > {
-  const raw = await LocalStorage.getItem<string>(LOCAL_PROFILE_STORAGE_KEY);
+  const raw = await LocalStorage.getItem<string>(await storageKey());
   if (!raw) {
     return undefined;
   }
@@ -15,7 +21,7 @@ export async function readLocalProfileSnapshot(): Promise<
   try {
     return JSON.parse(raw) as UserProfileSnapshot;
   } catch {
-    await LocalStorage.removeItem(LOCAL_PROFILE_STORAGE_KEY);
+    await LocalStorage.removeItem(await storageKey());
     return undefined;
   }
 }
@@ -40,13 +46,10 @@ export async function saveLocalProfileSnapshot(
     fetchedAt: now,
   };
 
-  await LocalStorage.setItem(
-    LOCAL_PROFILE_STORAGE_KEY,
-    JSON.stringify(profile),
-  );
+  await LocalStorage.setItem(await storageKey(), JSON.stringify(profile));
   return profile;
 }
 
 export async function clearLocalProfileSnapshot(): Promise<void> {
-  await LocalStorage.removeItem(LOCAL_PROFILE_STORAGE_KEY);
+  await LocalStorage.removeItem(await storageKey());
 }

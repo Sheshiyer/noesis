@@ -384,6 +384,10 @@ export async function calculateEngine(
   input: EngineExecutionInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<EngineExecutionResult> {
+  if (config.authMode === "account")
+    throw new Error(
+      "Account calculations await the subject-scoped engine contract. Your selected profile is not submitted to the operator route.",
+    );
   const route = await resolveExecutionRoute(config);
   if (route.target === "witness") {
     return calculateEngineViaWitness(route, engineId, input, fetchImpl);
@@ -436,6 +440,10 @@ export async function executeWorkflow(
   input: EngineExecutionInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<WorkflowExecutionResult> {
+  if (config.authMode === "account")
+    throw new Error(
+      "Account calculations await the subject-scoped engine contract. Your selected profile is not submitted to the operator route.",
+    );
   const route = await resolveExecutionRoute(config);
   if (route.target === "witness") {
     return executeWorkflowViaWitness(route, workflowId, input, fetchImpl);
@@ -460,6 +468,7 @@ export class SelemeneApiClient {
   public rateLimitInfo: RateLimitInfo = {};
   private readonly baseUrl: string;
   private readonly apiKey: string;
+  private readonly getAccessToken?: () => Promise<string>;
 
   constructor(
     config: SelemeneClientConfig,
@@ -467,6 +476,7 @@ export class SelemeneApiClient {
   ) {
     this.baseUrl = normalizeBaseUrl(config.baseUrl);
     this.apiKey = config.apiKey.trim();
+    this.getAccessToken = config.getAccessToken;
 
     if (!this.baseUrl) {
       throw new Error(
@@ -474,7 +484,7 @@ export class SelemeneApiClient {
       );
     }
 
-    if (!this.apiKey) {
+    if (!this.apiKey && !this.getAccessToken) {
       throw new Error(
         "Selemene Engine API key is missing. Add an access key before using operator workbench surfaces.",
       );
@@ -612,10 +622,15 @@ export class SelemeneApiClient {
       authHeader:
         context.auth === false
           ? undefined
-          : {
-              name: "X-API-Key",
-              value: this.apiKey,
-            },
+          : this.getAccessToken
+            ? {
+                name: "Authorization",
+                value: `Bearer ${await this.getAccessToken()}`,
+              }
+            : {
+                name: "X-API-Key",
+                value: this.apiKey,
+              },
       fetchImpl: this.fetchImpl,
     });
     this.captureRateLimit(response.headers);
@@ -1081,9 +1096,7 @@ function toUserProfileRequest(
     request.full_name = update.fullName;
   }
 
-  if (update.email !== undefined) {
-    request.email = update.email;
-  }
+  // Identity email is changed only through verified account linking.
 
   if (update.birthDate !== undefined) {
     request.birth_date = update.birthDate;

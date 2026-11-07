@@ -6,6 +6,7 @@ import {
   SelemeneClientConfig,
   SelemenePreferences,
 } from "./types";
+import { getAccountToken, hasAccountSession } from "./account-session";
 import { normalizeBaseUrl } from "./urls";
 
 const API_KEY_STORAGE_KEY = "noesis.apiKey";
@@ -118,6 +119,14 @@ export function shouldCacheRawPayloadsPreference(): boolean {
 }
 
 export async function getStoredConfig(): Promise<SelemeneClientConfig | null> {
+  const baseUrl = await getStoredBaseUrl();
+  if (await hasAccountSession(baseUrl))
+    return {
+      baseUrl,
+      apiKey: "",
+      authMode: "account",
+      getAccessToken: () => getAccountToken(baseUrl),
+    };
   const apiKey = await getStoredApiKey();
   if (!apiKey) {
     return null;

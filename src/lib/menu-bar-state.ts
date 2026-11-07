@@ -1,5 +1,3 @@
-import { environment } from "@raycast/api";
-import path from "node:path";
 import {
   DashboardSnapshot,
   MenuBarInsightKind,
@@ -7,7 +5,11 @@ import {
   SyncIssue,
 } from "./types";
 import { getStoredConfig, DEFAULT_BASE_URL } from "./settings";
-import { syncDashboardSnapshot, syncMenuBarInsights } from "./queries";
+import {
+  getCacheDatabasePath,
+  syncDashboardSnapshot,
+  syncMenuBarInsights,
+} from "./queries";
 import { mapMenuBarInsights } from "./menu-bar-insights";
 import { createNoesisCacheRepository } from "./cache";
 import { getReadingHistoryLimitPreference } from "./settings";
@@ -22,14 +24,10 @@ export interface MenuBarState {
   logs: string[];
 }
 
-function getCacheRepository() {
-  return createNoesisCacheRepository(getCacheDatabasePath(), {
+async function getCacheRepository() {
+  return createNoesisCacheRepository(await getCacheDatabasePath(), {
     readingHistoryLimit: getReadingHistoryLimitPreference(),
   });
-}
-
-export function getCacheDatabasePath(): string {
-  return path.join(environment.supportPath, "noesis-cache.sqlite");
 }
 
 export async function loadMenuBarState(
@@ -88,7 +86,9 @@ export async function loadMenuBarState(
         hasConfig: Boolean(storedConfig),
         hasBirthDate: Boolean(dashboard.profile?.birthDate),
       });
-      insights = mapMenuBarInsights(getCacheRepository().readMenuBarInsights());
+      insights = mapMenuBarInsights(
+        (await getCacheRepository()).readMenuBarInsights(),
+      );
     }
 
     return {
@@ -128,6 +128,6 @@ export async function loadMenuBarState(
   }
 }
 
-export function clearMenuBarCache(): void {
-  getCacheRepository().clearAll();
+export async function clearMenuBarCache(): Promise<void> {
+  (await getCacheRepository()).clearAll();
 }
