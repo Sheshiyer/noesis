@@ -17,7 +17,7 @@ and `~/.config/opencode`; this repo owns planning and acceptance.
 | Acceptance | `ISA.md` when present |
 | Session loop | `/gsd:goal` → `.temperance/goal.json` (not a second planner) |
 | Handoff (if present) | `.project/HANDOFF.md` |
-| Parallel execute | `te-dispatch-paid` / `temperance-batch` |
+| Parallel execute | `noesis-execute` / `temperance-batch` |
 
 `/gsd:*` binds the mode. A card only on a bare first prompt with no saved session/cwd mode.
 

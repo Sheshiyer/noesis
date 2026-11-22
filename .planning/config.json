@@ -17,7 +17,7 @@
   },
   "temperance": {
     "next_wave": true,
-    "fleet_combo": "te-dispatch-paid",
+    "fleet_combo": "noesis-execute",
     "host_runtime": "~/.temperance_engine"
   }
 }

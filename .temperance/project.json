@@ -22,7 +22,7 @@
     "isa": "ISA.md",
     "agents": "AGENTS.md",
     "next_wave_cli": "temperance-next-wave",
-    "fleet_combo": "te-dispatch-paid",
+    "fleet_combo": "noesis-execute",
     "batch": "temperance-batch"
   },
   "planning": {

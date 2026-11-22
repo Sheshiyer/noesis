@@ -14,3 +14,4 @@ scripts/
 assets/icon-emoji.txt
 .codegraph/
 .cursor/
+.worktrees/
