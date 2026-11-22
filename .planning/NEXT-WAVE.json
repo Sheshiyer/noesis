@@ -63,7 +63,7 @@
     "reason": "phase \"Post-Implementation Verification Checklist\" has 10 open tasks; take next batch",
     "mode": "sequential-batch",
     "phase": "Post-Implementation Verification Checklist",
-    "combo": "te-build",
+    "combo": "noesis-build",
     "tasks": [
       {
         "id": "L1",
@@ -147,7 +147,7 @@
             "source": "docs/plans/2026-06-30-dashboard-menu-refresh-fix.md"
           }
         ],
-        "combo": "te-build",
+        "combo": "noesis-build",
         "concurrency": 2,
         "worktree_required": false
       }
