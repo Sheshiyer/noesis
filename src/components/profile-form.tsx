@@ -1,3 +1,8 @@
+import {
+  AccountContext,
+  SubjectProfile,
+  saveSubjectProfile,
+} from "../lib/account";
 import React, { useMemo, useState } from "react";
 import { Action, Form, Icon, showToast, Toast } from "@raycast/api";
 import { goldIcon } from "../lib/design-tokens";
@@ -27,15 +32,25 @@ interface ProfileFormValues {
 
 export function ProfileForm({
   snapshot,
+  account,
+  resource,
+  baseUrl,
 }: {
   snapshot: DashboardSnapshot | null;
+  account?: AccountContext;
+  resource?: SubjectProfile;
+  baseUrl?: string;
 }) {
   const initial = useMemo(
     () => buildInitialValues(snapshot?.profile),
     [snapshot],
   );
   const [fullName, setFullName] = useState(initial.fullName);
-  const [email, setEmail] = useState(initial.email);
+  const email = account?.account.preferred_email ?? initial.email;
+  const [revision, setRevision] = useState(resource);
+  const readOnly =
+    account &&
+    !account.subjects.some((s) => s.id === resource?.subject_id && s.can_edit);
   const [birthDate, setBirthDate] = useState(initial.birthDate);
   const [birthTime, setBirthTime] = useState(initial.birthTime);
   const [locationName, setLocationName] = useState(initial.locationName);
@@ -62,13 +77,21 @@ export function ProfileForm({
         values,
         snapshot?.profile?.preferences ?? {},
       );
-      await saveLocalProfileSnapshot(payload, snapshot?.profile);
-      if (config) {
-        await updateUserProfile(config, payload);
-        await syncDashboardSnapshot({ force: true });
+      if (readOnly) throw new Error("This subject is read-only.");
+      if (account && revision && baseUrl) {
+        setRevision(await saveSubjectProfile(baseUrl, revision, payload));
+      } else {
+        if (config?.authMode === "account")
+          throw new Error("Open Account to edit the selected server profile.");
+        await saveLocalProfileSnapshot(payload, snapshot?.profile);
+        if (config) {
+          await updateUserProfile(config, payload);
+          await syncDashboardSnapshot({ force: true });
+        }
       }
       toast.style = Toast.Style.Success;
-      toast.title = config ? "Profile updated" : "Ritual defaults saved";
+      toast.title =
+        account || config ? "Server profile saved" : "Local defaults saved";
       toast.message = config
         ? "Birth data and timezone are ready for new readings."
         : "Witness mode can use this context for Daily Ritual and Pulse & Remedy.";
@@ -88,34 +111,40 @@ export function ProfileForm({
       navigationTitle="Ritual Defaults"
       actions={
         <NoesisActionPanel snapshot={snapshot}>
-          <Action.SubmitForm
-            title={
-              snapshot?.access?.canUseEngineWorkbench
-                ? "Save Profile"
-                : "Save Ritual Defaults"
-            }
-            icon={goldIcon(Icon.CheckCircle)}
-            onSubmit={() =>
-              handleSubmit({
-                fullName,
-                email,
-                birthDate,
-                birthTime,
-                locationName,
-                latitude,
-                longitude,
-                timezone,
-                defaultPrecision,
-                defaultWorkflow,
-              })
-            }
-          />
+          {!readOnly && (
+            <Action.SubmitForm
+              title={
+                snapshot?.access?.canUseEngineWorkbench
+                  ? "Save Profile"
+                  : "Save Ritual Defaults"
+              }
+              icon={goldIcon(Icon.CheckCircle)}
+              onSubmit={() =>
+                handleSubmit({
+                  fullName,
+                  email,
+                  birthDate,
+                  birthTime,
+                  locationName,
+                  latitude,
+                  longitude,
+                  timezone,
+                  defaultPrecision,
+                  defaultWorkflow,
+                })
+              }
+            />
+          )}
         </NoesisActionPanel>
       }
     >
       <Form.Description
         title="Ritual Defaults"
-        text="These values get reused as the birth data and timezone context for Daily Ritual and Pulse & Remedy. An access key also syncs them to Selemene."
+        text={
+          account
+            ? `Server profile revision ${revision?.revision}. ${readOnly ? "Read-only grant; changes cannot be saved." : "Saving requires the current revision and your edit grant."}`
+            : "Guest defaults stay local. They are never automatically imported when you sign in. An operator access key uses its separate account profile."
+        }
       />
       <Form.TextField
         id="fullName"
@@ -123,11 +152,9 @@ export function ProfileForm({
         value={fullName}
         onChange={setFullName}
       />
-      <Form.TextField
-        id="email"
-        title="Email"
-        value={email}
-        onChange={setEmail}
+      <Form.Description
+        title={account ? "Verified Preferred Email" : "Account Email"}
+        text={email || "Sign in through Account to view your verified email."}
       />
       <Form.TextField
         id="birthDate"
@@ -266,7 +293,7 @@ function toProfileUpdate(
 
   return {
     fullName: values.fullName.trim(),
-    email: values.email.trim(),
+
     birthDate: values.birthDate.trim() || undefined,
     birthTime: values.birthTime.trim() || undefined,
     birthLocation:

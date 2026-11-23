@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -303,4 +304,101 @@ test("cache repository enforces the configured reading history limit", () => {
 
   assert.equal(snapshot.readings.length, 1);
   assert.equal(snapshot.readings[0]?.id, "reading-newer");
+});
+
+function availabilitySnapshot(
+  engines: Array<{
+    id: string;
+    availability?: "declared" | "available" | "degraded" | "unavailable";
+  }>,
+) {
+  return {
+    baseUrl: "https://selemene.tryambakam.space",
+    fetchedAt: "2026-09-27T10:00:00Z",
+    capabilities: [],
+    engines: engines.map((engine) => ({
+      id: engine.id,
+      name: engine.id,
+      requiredPhase: 0,
+      availability: engine.availability,
+      fetchedAt: "2026-09-27T10:00:00Z",
+    })),
+  };
+}
+
+test("cache repository round-trips contract-v1 engine availability", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "noesis-cache-test-"));
+  const databasePath = path.join(tempDir, "cache.sqlite");
+  const repository = createNoesisCacheRepository(databasePath);
+
+  repository.saveRemoteSnapshot(
+    availabilitySnapshot([
+      { id: "tarot", availability: "degraded" },
+      { id: "numerology" },
+    ]),
+  );
+
+  const engines = repository.readSnapshot(
+    "https://selemene.tryambakam.space",
+    true,
+  ).engines;
+  assert.equal(
+    engines.find((engine) => engine.id === "tarot")?.availability,
+    "degraded",
+  );
+  // A NULL column means availability was never reported: stays undefined.
+  assert.equal(
+    engines.find((engine) => engine.id === "numerology")?.availability,
+    undefined,
+  );
+
+  // A bad stored value is normalized to "declared" on read.
+  execFileSync("sqlite3", [
+    databasePath,
+    "UPDATE engines SET availability = 'turbo' WHERE engine_id = 'tarot';",
+  ]);
+  const reopened = createNoesisCacheRepository(databasePath);
+  assert.equal(
+    reopened
+      .readSnapshot("https://selemene.tryambakam.space", true)
+      .engines.find((engine) => engine.id === "tarot")?.availability,
+    "declared",
+  );
+});
+
+test("cache repository migrates a legacy engines table idempotently", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "noesis-cache-test-"));
+  const databasePath = path.join(tempDir, "cache.sqlite");
+  // Bootstrap the current schema, then rebuild engines without the column.
+  createNoesisCacheRepository(databasePath);
+  execFileSync("sqlite3", [
+    databasePath,
+    `DROP TABLE engines;
+     CREATE TABLE engines (
+       engine_id TEXT PRIMARY KEY,
+       name TEXT NOT NULL,
+       required_phase INTEGER NOT NULL,
+       fetched_at TEXT NOT NULL
+     ) STRICT;`,
+  ]);
+
+  const first = createNoesisCacheRepository(databasePath);
+  const second = createNoesisCacheRepository(databasePath);
+  second.saveRemoteSnapshot(
+    availabilitySnapshot([{ id: "tarot", availability: "available" }]),
+  );
+
+  assert.equal(
+    first.readSnapshot("https://selemene.tryambakam.space", true).engines[0]
+      ?.availability,
+    "available",
+  );
+  const columns = execFileSync(
+    "sqlite3",
+    [databasePath, "SELECT name FROM pragma_table_info('engines');"],
+    { encoding: "utf8" },
+  )
+    .trim()
+    .split("\n");
+  assert.equal(columns.filter((name) => name === "availability").length, 1);
 });

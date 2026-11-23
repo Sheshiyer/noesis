@@ -6,6 +6,8 @@ import {
   executeWorkflow,
   fetchRemoteSnapshot,
   normalizeBaseUrl,
+  SelemeneApiClient,
+  toEngineExecutionResult,
   updateUserProfile,
   validateSelemeneCredentials,
   withTarotExecutionOptions,
@@ -240,6 +242,11 @@ test("fetchRemoteSnapshot maps service, catalog, usage, and readings payloads", 
         }),
         { status: 200 },
       );
+    }
+
+    if (url.endsWith("/api/v1/engines/capabilities")) {
+      // Older deployments without the capabilities route.
+      return new Response("not found", { status: 404 });
     }
 
     throw new Error(`Unexpected URL: ${url}`);
@@ -974,6 +981,11 @@ test("fetchRemoteSnapshot keeps partial failures as sync issues", async () => {
       });
     }
 
+    if (url.endsWith("/api/v1/engines/capabilities")) {
+      // Older deployments without the capabilities route.
+      return new Response("not found", { status: 404 });
+    }
+
     throw new Error(`Unexpected URL: ${url}`);
   }) as typeof fetch;
 
@@ -1160,4 +1172,196 @@ test("updateUserProfile patches reusable profile fields and maps the response", 
   assert.equal(profile.birthLocation?.latitude, 12.9716);
   assert.equal(profile.birthLocation?.name, "Bengaluru, India");
   assert.equal(profile.preferences.default_workflow, "daily-practice");
+});
+
+test("getCapabilities hits /api/v1/engines/capabilities with X-API-Key", async () => {
+  const calls: Array<{ url: string; init?: RequestInit }> = [];
+  const fetchStub = (async (
+    input: string | URL | Request,
+    init?: RequestInit,
+  ) => {
+    calls.push({ url: String(input), init });
+    return new Response(
+      JSON.stringify({
+        capabilities: [
+          {
+            contract_version: "v1",
+            engine_id: "tarot",
+            display_name: "Tarot",
+            availability: "available",
+            runtime_kind: "typescript",
+            dependencies: [],
+          },
+        ],
+        count: 1,
+      }),
+      { status: 200 },
+    );
+  }) as typeof fetch;
+  const client = new SelemeneApiClient(
+    { baseUrl: "https://selemene.tryambakam.space", apiKey: "k" },
+    fetchStub,
+  );
+  const rows = await client.getCapabilities();
+  assert.equal(
+    calls[0]?.url,
+    "https://selemene.tryambakam.space/api/v1/engines/capabilities",
+  );
+  assert.equal(new Headers(calls[0]?.init?.headers).get("X-API-Key"), "k");
+  assert.equal(rows[0]?.availability, "available");
+  assert.equal(rows[0]?.engineId, "tarot");
+  assert.equal(rows[0]?.runtimeKind, "typescript");
+});
+
+test("getCapabilities returns [] on 404 and unknown availability becomes declared", async () => {
+  const notFound = (async () =>
+    new Response("x", { status: 404 })) as unknown as typeof fetch;
+  const client = new SelemeneApiClient(
+    { baseUrl: "https://selemene.tryambakam.space", apiKey: "k" },
+    notFound,
+  );
+  assert.deepEqual(await client.getCapabilities(), []);
+  const weird = (async () =>
+    new Response(
+      JSON.stringify({
+        capabilities: [
+          {
+            contract_version: "v1",
+            engine_id: "x",
+            display_name: "X",
+            availability: "turbo",
+            runtime_kind: "native",
+            dependencies: [],
+          },
+        ],
+      }),
+      { status: 200 },
+    )) as unknown as typeof fetch;
+  const client2 = new SelemeneApiClient(
+    { baseUrl: "https://selemene.tryambakam.space", apiKey: "k" },
+    weird,
+  );
+  assert.equal((await client2.getCapabilities())[0]?.availability, "declared");
+});
+
+test("getCapabilities rethrows non-404 failures", async () => {
+  const failing = (async () =>
+    new Response(JSON.stringify({ error: "boom" }), {
+      status: 500,
+    })) as unknown as typeof fetch;
+  const client = new SelemeneApiClient(
+    { baseUrl: "https://selemene.tryambakam.space", apiKey: "k" },
+    failing,
+  );
+  await assert.rejects(() => client.getCapabilities(), /boom/);
+});
+
+test("toEngineExecutionResult keeps provenance", () => {
+  const out = toEngineExecutionResult({
+    engine_id: "tarot",
+    result: {},
+    metadata: {},
+    provenance: {
+      runtime_kind: "typescript",
+      implementation_version: "1.0.0",
+      cached: false,
+      fallback_used: false,
+      confidence: 1,
+    },
+  });
+  assert.equal(out.provenance?.confidence, 1);
+});
+
+test("fetchRemoteSnapshot stamps availability and reports capability failures as sync issues", async () => {
+  const makeStub = (capabilitiesStatus: number) =>
+    (async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/health/live")) {
+        return new Response(
+          JSON.stringify({
+            status: "ok",
+            version: "3.0.0",
+            uptime_seconds: 1,
+            engines_loaded: 2,
+            workflows_loaded: 0,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/api/v1/status")) {
+        return new Response(
+          JSON.stringify({ engines: ["tarot", "numerology"], workflows: [] }),
+          { status: 200 },
+        );
+      }
+      if (url.endsWith("/api/v1/engines/capabilities")) {
+        if (capabilitiesStatus !== 200) {
+          return new Response(JSON.stringify({ error: "caps down" }), {
+            status: capabilitiesStatus,
+          });
+        }
+        return new Response(
+          JSON.stringify({
+            capabilities: [
+              {
+                contract_version: "v1",
+                engine_id: "tarot",
+                display_name: "Tarot",
+                availability: "degraded",
+                runtime_kind: "typescript",
+                dependencies: [],
+              },
+            ],
+            count: 1,
+          }),
+          { status: 200 },
+        );
+      }
+      if (url.includes("/api/v1/engines/") && url.endsWith("/info")) {
+        return new Response(
+          JSON.stringify({ engine_name: "E", required_phase: 0 }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    }) as typeof fetch;
+
+  const options = {
+    includeProfile: false,
+    includeUsage: false,
+    includeReadings: false,
+  };
+  const config = {
+    baseUrl: "https://selemene.tryambakam.space",
+    apiKey: "nk_test_key",
+  };
+
+  const ok = await fetchRemoteSnapshot(config, {
+    ...options,
+    fetchImpl: makeStub(200),
+  });
+  assert.equal(ok.capabilities.length, 1);
+  assert.equal(
+    ok.engines?.find((engine) => engine.id === "tarot")?.availability,
+    "degraded",
+  );
+  assert.equal(
+    ok.engines?.find((engine) => engine.id === "numerology")?.availability,
+    undefined,
+  );
+  assert.equal(ok.syncIssues?.length, 0);
+
+  const missing = await fetchRemoteSnapshot(config, {
+    ...options,
+    fetchImpl: makeStub(404),
+  });
+  assert.deepEqual(missing.capabilities, []);
+  assert.equal(missing.syncIssues?.length, 0);
+
+  const broken = await fetchRemoteSnapshot(config, {
+    ...options,
+    fetchImpl: makeStub(500),
+  });
+  assert.deepEqual(broken.capabilities, []);
+  assert.equal(broken.syncIssues?.[0]?.resource, "capabilities");
 });

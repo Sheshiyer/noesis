@@ -11,6 +11,8 @@ export interface SelemenePreferences {
 export interface SelemeneClientConfig {
   baseUrl: string;
   apiKey: string;
+  authMode?: "account" | "operator";
+  getAccessToken?: () => Promise<string>;
 }
 
 export type ExecutionRouteTarget = "selemene" | "witness";
@@ -21,7 +23,7 @@ export type ApiKeyStorageMode =
   | "environment"
   | "none";
 
-export type AccessMode = "admin" | "witness";
+export type AccessMode = "admin" | "witness" | "account";
 
 export interface AccessContext {
   mode: AccessMode;
@@ -55,10 +57,44 @@ export interface WorkflowSummary {
   fetchedAt?: string;
 }
 
+export type CapabilityAvailability =
+  | "declared"
+  | "available"
+  | "degraded"
+  | "unavailable";
+export type RuntimeKind =
+  | "native"
+  | "typescript"
+  | "python"
+  | "database-conditional"
+  | "composed";
+
+export interface EngineCapability {
+  contractVersion: "v1";
+  engineId: string;
+  displayName: string;
+  availability: CapabilityAvailability;
+  runtimeKind: RuntimeKind;
+  dependencies: string[];
+  requiredPhase?: number;
+  implementationVersion?: string;
+}
+
+export interface EngineProvenance {
+  runtime_kind: RuntimeKind;
+  implementation_version: string;
+  cached: boolean;
+  fallback_used: boolean;
+  backend_id?: string;
+  provider_id?: string;
+  confidence?: number;
+}
+
 export interface EngineSummary {
   id: string;
   name: string;
   requiredPhase: number;
+  availability?: CapabilityAvailability;
   fetchedAt?: string;
 }
 
@@ -156,6 +192,7 @@ export interface EngineExecutionResult {
   metadata: Record<string, unknown>;
   timestamp?: string;
   route?: ExecutionRouteInfo;
+  provenance?: EngineProvenance;
   raw: Record<string, unknown>;
 }
 
@@ -250,6 +287,7 @@ export interface RemoteSnapshot {
   usage?: UsageSnapshot;
   workflows?: WorkflowSummary[];
   engines?: EngineSummary[];
+  capabilities: EngineCapability[];
   readings?: ReadingSummary[];
   readingStats?: ReadingStat[];
   rateLimit?: RateLimitInfo;

@@ -42,6 +42,11 @@ export function NoesisActionPanel({
     <ActionPanel>
       {children}
       <ActionPanel.Section>
+        <Action
+          title="Open Account"
+          icon={goldIcon(Icon.Person)}
+          onAction={() => openCommand("account")}
+        />
         {onRefresh ? (
           <Action
             title={refreshTitle}

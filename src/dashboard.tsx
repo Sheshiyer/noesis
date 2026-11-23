@@ -28,7 +28,6 @@ import {
   WorkflowDetailView,
   WorkflowsBrowser,
 } from "./components/noesis-browsers";
-import { ProfileForm } from "./components/profile-form";
 import { canUseEngineWorkbench, getSnapshotAccess } from "./lib/access";
 import {
   buildRecommendedNowItems,
@@ -243,11 +242,11 @@ export default function Dashboard() {
                     "",
                     SECTION_DIVIDER,
                     "",
-                    `- Access Mode: ${access.mode === "admin" ? "Operator" : "Witness"}`,
+                    `- Access Mode: ${access.mode === "account" ? "Account" : access.mode === "admin" ? "Operator" : "Witness"}`,
                     `- Context Quality: ${contextQuality.label}`,
                     `- Context Note: ${contextQuality.summary}`,
                     snapshot.profile
-                      ? `- Active operator: ${snapshot.profile.fullName}`
+                      ? `- Selected subject: ${snapshot.profile.fullName}`
                       : "- No live profile cached yet.",
                     snapshot.profile?.birthDate
                       ? `- Birth date: ${snapshot.profile.birthDate}`
@@ -276,10 +275,10 @@ export default function Dashboard() {
                   onRefresh={handleRefresh}
                   hideDashboardAction
                 >
-                  <Action.Push
+                  <Action
                     title="Edit Ritual Defaults"
                     icon={goldIcon(Icon.Pencil)}
-                    target={<ProfileForm snapshot={snapshot} />}
+                    onAction={() => openCommand("profile")}
                   />
                   <Action
                     title="Open Profile Command"
